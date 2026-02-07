@@ -51,13 +51,23 @@ SnapBet is a fast-paced prediction game where players bet on whether the quarter
 
 ## 🏆 Prize Qualifications
 
-### Integrate ENS ($3,500)
-**How we qualify:**
-- **Custom React Hooks:** We implemented custom logic using `wagmi`'s `useEnsName` and `useEnsAvatar` hooks throughout the application.
-- **Avatar Resolution:** The `GameArena` component resolves and displays the user's ENS avatar next to their name.
-- **Reverse Resolution:** Users can connect with just their address, and we automatically reverse-resolve it to their primary ENS name using `useEnsName`.
-- **Leaderboard Integration:** The leaderboard component (`LeaderboardItem`) independently resolves ENS names and avatars for all top players, ensuring a social and identity-rich experience.
-- **Database Integration:** ENS names are stored alongside addresses in our Cloudflare D1 database for persistent identity across sessions.
+### Integrate ENS ($3,500) & Yellow Network ($15,000)
+
+#### Yellow - $15,000
+
+**How are you using this Protocol / API?**
+We use Yellow Network's state channel infrastructure to enable high-frequency, gasless betting. The `YellowService` manages the lifecycle of state channels—opening, updating with signed bets, and closing with final settlements—allowing for a seamless, instant user experience that traditional on-chain transactions cannot match.
+
+**How easy is it to use the API / Protocol? (1 - very difficult, 10 - very easy)**
+8
+
+#### ENS - $5,000
+
+**How are you using this Protocol / API?**
+We integrated ENS to provide a social identity layer. The application uses `wagmi` hooks (`useEnsName`, `useEnsAvatar`) to reverse-resolve user addresses to their primary ENS names and avatars. This is displayed in the user's profile badge and on the live leaderboard, making the game more engaging and personal.
+
+**How easy is it to use the API / Protocol? (1 - very difficult, 10 - very easy)**
+10
 
 ## 🚀 Quick Start
 
