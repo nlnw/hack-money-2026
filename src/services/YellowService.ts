@@ -13,7 +13,7 @@ const publicClient = createPublicClient({
 export class YellowService {
     private client: any;
     private signer: any;
-    private isConnected = false;
+    public isConnected = false;
 
     private listeners: ((state: any) => void)[] = [];
 

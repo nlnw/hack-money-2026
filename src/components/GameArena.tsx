@@ -21,7 +21,7 @@ export function GameArena() {
         if (address && !balanceLoading && balance === null) {
             setBalanceLoading(true);
             fetch(`/api/balance?address=${address}`)
-                .then(res => res.json())
+                .then(res => res.json() as Promise<{ balance?: number }>)
                 .then(data => {
                     setBalance(data.balance ?? 1000);
                     setBalanceLoading(false);
@@ -95,7 +95,7 @@ export function GameArena() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ address, delta, ensName: displayName })
             });
-            const balanceData = await balanceRes.json();
+            const balanceData = await balanceRes.json() as { newBalance?: number };
             if (balanceData.newBalance !== undefined) {
                 setBalance(balanceData.newBalance);
             }
