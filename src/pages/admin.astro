@@ -140,7 +140,7 @@ export const prerender = false;
                     id="password"
                     placeholder="Password..."
                 />
-                <button onclick="login()">Login</button>
+                <button id="login-btn">Login</button>
             </div>
 
             <div id="admin-section" class="admin-panel hidden">
@@ -158,8 +158,8 @@ export const prerender = false;
                 </div>
 
                 <div style="margin-bottom: 20px;">
-                    <button onclick="loadUsers()">🔄 Refresh</button>
-                    <button class="warning" onclick="resetAll()"
+                    <button id="refresh-btn">🔄 Refresh</button>
+                    <button id="reset-btn" class="warning"
                         >⚠️ Reset All Balances</button
                     >
                 </div>
@@ -179,11 +179,13 @@ export const prerender = false;
             </div>
         </div>
 
-        <script>
+        <script is:inline>
+            // @ts-nocheck
             let password = "";
 
             function login() {
-                password = document.getElementById("password").value;
+                const input = document.getElementById("password");
+                password = input ? input.value : "";
                 loadUsers();
             }
 
@@ -199,49 +201,77 @@ export const prerender = false;
                         return;
                     }
 
-                    document
-                        .getElementById("login-section")
-                        .classList.add("hidden");
-                    document
-                        .getElementById("admin-section")
-                        .classList.remove("hidden");
+                    const loginSection =
+                        document.getElementById("login-section");
+                    const adminSection =
+                        document.getElementById("admin-section");
+                    if (loginSection) loginSection.classList.add("hidden");
+                    if (adminSection) adminSection.classList.remove("hidden");
 
                     const users = data.users || [];
-                    document.getElementById("total-users").textContent =
-                        users.length;
-                    document.getElementById("total-balance").textContent =
-                        "$" + users.reduce((sum, u) => sum + u.balance, 0);
+                    const totalUsersEl = document.getElementById("total-users");
+                    const totalBalanceEl =
+                        document.getElementById("total-balance");
+                    if (totalUsersEl)
+                        totalUsersEl.textContent = String(users.length);
+                    if (totalBalanceEl)
+                        totalBalanceEl.textContent =
+                            "$" +
+                            users.reduce(function (sum, u) {
+                                return sum + u.balance;
+                            }, 0);
 
                     const tbody = document.getElementById("users-table");
-                    tbody.innerHTML = users
-                        .map(
-                            (u) => `
-                    <tr>
-                        <td class="address">${u.address}</td>
-                        <td>${u.ens_name || "-"}</td>
-                        <td>
-                            <input type="number" value="${u.balance}" id="balance-${u.address}" style="width: 80px;">
-                        </td>
-                        <td>${u.updated_at ? new Date(u.updated_at * 1000).toLocaleString() : "-"}</td>
-                        <td class="actions">
-                            <button onclick="updateUser('${u.address}')">💾 Save</button>
-                            <button class="danger" onclick="deleteUser('${u.address}')">🗑️</button>
-                        </td>
-                    </tr>
-                `,
-                        )
-                        .join("");
+                    if (tbody) {
+                        tbody.innerHTML = users
+                            .map(function (u) {
+                                return (
+                                    "<tr>" +
+                                    '<td class="address">' +
+                                    u.address +
+                                    "</td>" +
+                                    "<td>" +
+                                    (u.ens_name || "-") +
+                                    "</td>" +
+                                    '<td><input type="number" value="' +
+                                    u.balance +
+                                    '" id="balance-' +
+                                    u.address +
+                                    '" style="width: 80px;"></td>' +
+                                    "<td>" +
+                                    (u.updated_at
+                                        ? new Date(
+                                              u.updated_at * 1000,
+                                          ).toLocaleString()
+                                        : "-") +
+                                    "</td>" +
+                                    '<td class="actions">' +
+                                    "<button onclick=\"updateUser('" +
+                                    u.address +
+                                    "')\">💾 Save</button>" +
+                                    '<button class="danger" onclick="deleteUser(\'' +
+                                    u.address +
+                                    "')\">🗑️</button>" +
+                                    "</td>" +
+                                    "</tr>"
+                                );
+                            })
+                            .join("");
+                    }
 
                     showStatus("Loaded " + users.length + " users", "success");
                 } catch (e) {
-                    showStatus("Failed to load: " + e.message, "error");
+                    showStatus(
+                        "Failed to load: " +
+                            (e instanceof Error ? e.message : String(e)),
+                        "error",
+                    );
                 }
             }
 
             async function updateUser(address) {
-                const balance = parseInt(
-                    document.getElementById("balance-" + address).value,
-                );
+                const input = document.getElementById("balance-" + address);
+                const balance = input ? parseInt(input.value) : 0;
                 try {
                     const res = await fetch("/api/admin", {
                         method: "POST",
@@ -251,8 +281,8 @@ export const prerender = false;
                         },
                         body: JSON.stringify({
                             action: "update",
-                            address,
-                            balance,
+                            address: address,
+                            balance: balance,
                         }),
                     });
                     const data = await res.json();
@@ -262,7 +292,11 @@ export const prerender = false;
                     );
                     if (!data.error) loadUsers();
                 } catch (e) {
-                    showStatus("Update failed: " + e.message, "error");
+                    showStatus(
+                        "Update failed: " +
+                            (e instanceof Error ? e.message : String(e)),
+                        "error",
+                    );
                 }
             }
 
@@ -275,7 +309,10 @@ export const prerender = false;
                             "X-Admin-Password": password,
                             "Content-Type": "application/json",
                         },
-                        body: JSON.stringify({ action: "delete", address }),
+                        body: JSON.stringify({
+                            action: "delete",
+                            address: address,
+                        }),
                     });
                     const data = await res.json();
                     showStatus(
@@ -284,7 +321,11 @@ export const prerender = false;
                     );
                     if (!data.error) loadUsers();
                 } catch (e) {
-                    showStatus("Delete failed: " + e.message, "error");
+                    showStatus(
+                        "Delete failed: " +
+                            (e instanceof Error ? e.message : String(e)),
+                        "error",
+                    );
                 }
             }
 
@@ -306,31 +347,44 @@ export const prerender = false;
                     );
                     if (!data.error) loadUsers();
                 } catch (e) {
-                    showStatus("Reset failed: " + e.message, "error");
+                    showStatus(
+                        "Reset failed: " +
+                            (e instanceof Error ? e.message : String(e)),
+                        "error",
+                    );
                 }
             }
 
             function showStatus(msg, type) {
                 const el = document.getElementById("status");
-                el.textContent = msg;
-                el.className = "status " + type;
-                el.classList.remove("hidden");
-                setTimeout(() => el.classList.add("hidden"), 3000);
+                if (el) {
+                    el.textContent = msg;
+                    el.className = "status " + type;
+                    el.classList.remove("hidden");
+                    setTimeout(function () {
+                        el.classList.add("hidden");
+                    }, 3000);
+                }
             }
 
-            // Check for saved session
-            if (localStorage.getItem("admin_password")) {
-                password = localStorage.getItem("admin_password");
-                loadUsers().then(() => {
-                    if (
-                        !document
-                            .getElementById("login-section")
-                            .classList.contains("hidden")
-                    ) {
-                        localStorage.removeItem("admin_password");
-                    }
-                });
-            }
+            // Attach event listeners when DOM is ready
+            document.addEventListener("DOMContentLoaded", function () {
+                const loginBtn = document.getElementById("login-btn");
+                const refreshBtn = document.getElementById("refresh-btn");
+                const resetBtn = document.getElementById("reset-btn");
+
+                if (loginBtn) loginBtn.addEventListener("click", login);
+                if (refreshBtn) refreshBtn.addEventListener("click", loadUsers);
+                if (resetBtn) resetBtn.addEventListener("click", resetAll);
+
+                // Also allow Enter key on password field
+                const pwdInput = document.getElementById("password");
+                if (pwdInput) {
+                    pwdInput.addEventListener("keypress", function (e) {
+                        if (e.key === "Enter") login();
+                    });
+                }
+            });
         </script>
     </body>
 </html>
