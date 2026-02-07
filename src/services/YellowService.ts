@@ -1,68 +1,200 @@
-import { createPublicClient, http, type WalletClient } from 'viem';
-import { mainnet } from 'viem/chains';
-import { NitroliteClient, WalletStateSigner, type NitroliteClientConfig } from '@erc7824/nitrolite';
+import { createAppSessionMessage, parseAnyRPCResponse as parseRPCResponse_ } from '@erc7824/nitrolite';
+// Quick fix for potential missing export in some versions/builds, or if it's named differently
+// We use parseAnyRPCResponse based on lint feedback, aliased to parseRPCResponse_ common name we used.
+
+import type { WalletClient } from 'viem';
 
 // Constants
-const CLEARNODE_URL = 'wss://clearnet.yellow.com/ws';
+const CLEARNODE_URL = 'wss://clearnet-sandbox.yellow.com/ws';
 
-const publicClient = createPublicClient({
-    chain: mainnet,
-    transport: http()
-});
+// Shim for parseRPCResponse
+const parseRPCResponse = (data: any) => {
+    // @ts-ignore
+    if (parseRPCResponse_) return parseRPCResponse_(data);
+    
+    // Fallback simple parser
+    if (typeof data === 'string') return JSON.parse(data);
+    return data;
+};
 
 export class YellowService {
-    private client: any;
-    private signer: any;
-    public isConnected = false;
-
+    private ws: WebSocket | null = null;
+    private isConnected = false;
     private listeners: ((state: any) => void)[] = [];
+    
+    private userAddress: string | null = null;
+    private messageSigner: ((message: string) => Promise<string>) | null = null;
+    private sessionId: string | null = null;
 
-    constructor() {
-        // Mock receiving updates from "Network"
-        setInterval(() => {
-            if (this.isConnected) {
-                this.notifyListeners();
-            }
-        }, 1000);
-    }
+    // We'll hardcode a counterparty for the "Game House" for now
+    // In a real app this might be dynamic or the ClearNode itself acting as the house
+    private partnerAddress = '0x0000000000000000000000000000000000000000'; // Placeholder
+
+    constructor() {}
 
     async connect(walletClient: WalletClient, address: string) {
         if (this.isConnected) return;
 
-        try {
-            console.log('Yellow SDK: Connecting to ClearNode...');
-            this.client = new NitroliteClient({
-                transport: { url: CLEARNODE_URL },
-                publicClient,
-                walletClient,
-                chainId: 1, // Mainnet
-                challengeDuration: 3600, // Minimum challenge duration
-                addresses: {
-                    custody: '0x0000000000000000000000000000000000000000', // Placeholder/Mock Custody Address
-                    adjudicator: '0x0000000000000000000000000000000000000000' // Placeholder/Mock Adjudicator Address
-                }
-            } as any);
-            this.signer = new WalletStateSigner(walletClient as any);
+        this.userAddress = address;
+        
+        // Setup message signer using viem walletClient
+        this.messageSigner = async (message: string | any) => {
+            // SDK passes RPCData (Array) to signer.
+            const messageString = typeof message === 'string' 
+                ? message 
+                : JSON.stringify(message, (_, v) => typeof v === 'bigint' ? v.toString() : v);
 
-            await new Promise(r => setTimeout(r, 200)); // Sim delay
-            console.log('Yellow SDK: Connected!');
+            console.log('Yellow SDK: Signing message:', messageString);
+
+            try {
+                // Use viem's signMessage which handles the underlying RPC method details (args order, etc.)
+                // and should prevent Coinbase Wallet from confusing it with TypedData
+                return await walletClient.signMessage({
+                    account: address as any,
+                    message: messageString
+                });
+            } catch (e: any) {
+                console.error('Yellow SDK: Signing failed', e);
+                // Fallback to raw request if high level fails, but log it
+                // Some wallets might stricter about hex vs string
+                throw e;
+            }
+        };
+
+        console.log('Yellow SDK: Connecting to Yellow Network Sandbox...');
+        this.ws = new WebSocket(CLEARNODE_URL);
+
+        this.ws.onopen = () => {
+            console.log('✅ Yellow SDK: Connected to Yellow Network!');
             this.isConnected = true;
-            this.notifyListeners();
-        } catch (error) {
-            console.error('Yellow SDK Connection Error:', error);
+            this.notifyListeners({ connected: true });
+            
+            // Auto-create session on connect 
+            // In a real app we might wait for user action
+            this.createSession(address);
+        };
+
+        this.ws.onmessage = (event) => {
+            try {
+                const message = parseRPCResponse(event.data);
+                this.handleMessage(message);
+            } catch (e) {
+                console.error('Yellow SDK: Error parsing message', e);
+            }
+        };
+
+        this.ws.onerror = (error) => {
+            console.error('Yellow SDK: Connection error:', error);
+            this.isConnected = false;
+            this.notifyListeners({ connected: false, error });
+        };
+        
+        this.ws.onclose = () => {
+            console.log('Yellow SDK: Disconnected');
+            this.isConnected = false;
+            this.notifyListeners({ connected: false });
+        };
+    }
+
+    async createSession(userAddress: string) {
+        if (!this.ws || !this.messageSigner) return;
+
+        // Use a dummy address for the "House"
+        const HOUSE_ADDRESS = '0x71C7656EC7ab88b098defB751B7401B5f6d8976F'; 
+
+        const appDefinition = {
+            protocol: 'snapshot-betting-v1',
+            participants: [userAddress, HOUSE_ADDRESS],
+            weights: [50, 50],
+            quorum: 100,
+            challenge: 0,
+            nonce: Date.now()
+        };
+
+        const allocations = [
+            { participant: userAddress, asset: 'usdc', amount: '1000000' }, // Virtual 1 USDC
+            { participant: HOUSE_ADDRESS, asset: 'usdc', amount: '10000000' } // House bank
+        ];
+
+        try {
+            console.log('Yellow SDK: Creating Session...');
+            // Fix: Pass params object directly, not wrapped in array
+            const sessionMessage = await createAppSessionMessage(
+                this.messageSigner as any,
+                { 
+                    definition: appDefinition,
+                    allocations: allocations
+                } as any
+            );
+
+            this.ws.send(sessionMessage);
+            console.log('Yellow SDK: Session Create Message Sent');
+        } catch (e) {
+            console.error('Yellow SDK: Failed to create session message', e);
         }
     }
 
     async placeBet(amount: number, prediction: 'RUN' | 'PASS') {
-        if (!this.isConnected) {
-            console.log('Yellow SDK (Simulated): Signing bet transaction...');
-        } else {
-            console.log('Yellow SDK: Creating App State Update...');
+        if (!this.isConnected || !this.ws || !this.messageSigner) {
+            console.error('Yellow SDK: Not connected');
+            return;
         }
 
-        await new Promise(r => setTimeout(r, 100));
-        console.log(`Yellow SDK: Signed "Balance - ${amount} | Prediction: ${prediction}"`);
-        this.notifyListeners();
+        console.log(`Yellow SDK: Placing bet ${amount} on ${prediction}`);
+
+        const paymentData = {
+            type: 'payment', // Or 'bet' if our protocol supports it
+            amount: amount.toString(),
+            recipient: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F', // House
+            prediction: prediction,
+            timestamp: Date.now()
+        };
+
+        try {
+            // Sign the bet
+            const signature = await this.messageSigner(JSON.stringify(paymentData));
+            
+            const signedBet = {
+                ...paymentData,
+                signature,
+                sender: this.userAddress
+            };
+
+            this.ws.send(JSON.stringify(signedBet));
+            console.log('Yellow SDK: Bet sent!', signedBet);
+            
+            // Optimistic update for UI
+            this.notifyListeners({ 
+                type: 'bet_placed', 
+                amount, 
+                prediction 
+            });
+
+        } catch (e) {
+            console.error('Yellow SDK: Failed to sign/send bet', e);
+        }
+    }
+
+    private handleMessage(message: any) {
+        console.log('📨 Yellow SDK Received:', message);
+        
+        // Handle specific message types based on QuickStart
+        if (message.type === 'session_created') {
+            this.sessionId = message.sessionId;
+            console.log('✅ Yellow SDK: Session Ready:', this.sessionId);
+            this.notifyListeners({ type: 'session_ready', sessionId: this.sessionId });
+        }
+        else if (message.type === 'payment') {
+            console.log('💰 Yellow SDK: Payment/Payout Received:', message.amount);
+            this.notifyListeners({ type: 'payout', amount: message.amount });
+        }
+        else if (message.result) {
+            // RPC Response
+            console.log('Yellow SDK: RPC Result:', message.result);
+        }
+        else if (message.error) {
+            console.error('❌ Yellow SDK Error:', message.error);
+        }
     }
 
     subscribe(callback: (state: any) => void) {
@@ -72,11 +204,10 @@ export class YellowService {
         };
     }
 
-    private notifyListeners() {
-        // In a real app, this would push data from the SDK
-        // For now, we signal that "something changed" so the app extracts the latest state
-        this.listeners.forEach(l => l({ updated: true }));
+    private notifyListeners(data: any) {
+        this.listeners.forEach(l => l(data));
     }
 }
 
 export const yellowService = new YellowService();
+

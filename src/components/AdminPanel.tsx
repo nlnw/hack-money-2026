@@ -6,15 +6,7 @@ export function AdminPanel() {
     if (!state) return null;
 
     return (
-        <div className="admin-panel" style={{
-            position: 'fixed',
-            bottom: '100px',
-            right: '20px',
-            background: 'rgba(0,0,0,0.8)',
-            padding: '20px',
-            border: '1px solid yellow',
-            borderRadius: '10px'
-        }}>
+        <div className="admin-panel">
             <h3>Admin Panel {connected ? '🟢' : '🔴'}</h3>
             <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
                 <button onClick={adminStart} disabled={state.status === 'OPEN'}>

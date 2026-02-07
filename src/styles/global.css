@@ -362,3 +362,39 @@ div[aria-labelledby="rk_connect_title"] {
     background: #1a1a2e !important;
 }
 
+/* Mobile Safari Fixes */
+html, body {
+    background-color: #0a0a0f; /* Match the darkest theme color */
+    overscroll-behavior-y: none; /* Prevent bounce effect if desired, or just let color handle it */
+}
+
+/* Admin Panel Styles */
+.admin-panel {
+    background: rgba(0, 0, 0, 0.8);
+    padding: 20px;
+    border: 1px solid yellow;
+    border-radius: 10px;
+    z-index: 100;
+}
+
+/* Desktop: Fixed positioning */
+@media (min-width: 769px) {
+    .admin-panel {
+        position: fixed;
+        bottom: 100px;
+        right: 20px;
+        width: 300px;
+    }
+}
+
+/* Mobile: Static positioning at bottom */
+@media (max-width: 768px) {
+    .admin-panel {
+        position: relative; /* Static flow */
+        width: 90%;
+        margin: 20px auto 80px auto; /* Bottom margin for ticker space */
+        bottom: auto;
+        right: auto;
+    }
+}
+
