@@ -19,14 +19,35 @@ SnapBet is a fast-paced prediction game where players bet on whether the quarter
 
 ## 🛠 Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Frontend | Astro + React |
-| Styling | CSS with animations |
-| Web3 | wagmi + RainbowKit |
-| State Channels | Yellow Network SDK |
-| Database | Cloudflare D1 |
-| Hosting | Cloudflare Pages |
+### Ethereum Developer Tools
+- **Wagmi** - React Hooks for Ethereum
+- **RainbowKit** - A great wallet connector
+- **Viem** - TypeScript Interface for Ethereum
+- **Yellow Network SDK** - State channel integration
+
+### Blockchains
+- **Yellow Network** - High-speed state channels
+- **Ethereum** - L1 settlement
+
+### Programming Languages
+- **TypeScript** - Core application logic
+- **CSS** - Styling and animations
+- **SQL** - Database schema
+
+### Web Frameworks
+- **Astro** - Static site generator and SSR
+- **React** - UI Components
+
+### Databases
+- **Cloudflare D1** - SQL database for user balances
+- **Cloudflare KV** - Session management
+
+### Infrastructure
+- **Cloudflare Pages** - Hosting and serverless functions
+- **Bun** - Fast JavaScript runtime & package manager
+
+### AI Tools
+- **Google Gemini** - Used for full-stack code generation, debugging, UI/UX design, and generating visual assets (logo, hero image).
 
 ## 🚀 Quick Start
 
