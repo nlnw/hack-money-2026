@@ -1,0 +1,225 @@
+---
+import { App } from "../components/App";
+import "../styles/global.css";
+
+export const prerender = false;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SnapBet Leaderboard</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family:
+          "Inter",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        background: linear-gradient(
+          135deg,
+          #0a0a0f 0%,
+          #1a1a2e 50%,
+          #0a0a0f 100%
+        );
+        color: #fff;
+        margin: 0;
+        padding: 20px;
+        min-height: 100vh;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      h1 {
+        color: #ffe600;
+        margin-bottom: 20px;
+        text-align: center;
+        font-size: 2.5rem;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        animation: glow 2s ease-in-out infinite alternate;
+      }
+      @keyframes glow {
+        from {
+          text-shadow: 0 0 10px rgba(255, 230, 0, 0.3);
+        }
+        to {
+          text-shadow:
+            0 0 20px rgba(255, 230, 0, 0.6),
+            0 0 30px rgba(255, 230, 0, 0.4);
+        }
+      }
+      .leaderboard-card {
+        background: rgba(30, 30, 40, 0.8);
+        padding: 24px;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+      th,
+      td {
+        padding: 16px;
+        text-align: left;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      }
+      th {
+        color: #888;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        letter-spacing: 1px;
+      }
+      tr:last-child td {
+        border-bottom: none;
+      }
+      tr:hover {
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .rank {
+        font-weight: bold;
+        color: #ffe600;
+        width: 60px;
+        text-align: center;
+      }
+      .address {
+        font-family: monospace;
+        color: rgba(255, 255, 255, 0.8);
+      }
+      .balance {
+        font-weight: bold;
+        color: #00ff94;
+        text-align: right;
+      }
+      .back-btn {
+        display: inline-block;
+        margin-bottom: 20px;
+        color: rgba(255, 255, 255, 0.6);
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: color 0.2s;
+      }
+      .back-btn:hover {
+        color: #ffe600;
+      }
+      .loading {
+        text-align: center;
+        padding: 40px;
+        color: rgba(255, 255, 255, 0.5);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <a href="/" class="back-btn">← Back to Game</a>
+
+      <h1>🏆 Top Degens</h1>
+
+      <div class="leaderboard-card">
+        <table>
+          <thead>
+            <tr>
+              <th style="text-align: center;">Rank</th>
+              <th>Player</th>
+              <th style="text-align: right;">Balance</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-body">
+            <tr>
+              <td colspan="3" class="loading">Loading leaderboard...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      interface User {
+        address: string;
+        ens_name: string | null;
+        balance: number;
+      }
+
+      interface APIResponse {
+        leaderboard?: User[];
+        error?: string;
+      }
+
+      async function loadLeaderboard() {
+        try {
+          const res = await fetch("/api/leaderboard");
+          // Type assertion to tell TypeScript what shape the data has
+          const data = (await res.json()) as APIResponse;
+
+          const tbody = document.getElementById("leaderboard-body");
+          // Null check for tbody
+          if (!tbody) return;
+
+          if (data.error) {
+            tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #ef4444; padding: 20px;">Error: ${data.error}</td></tr>`;
+            return;
+          }
+
+          if (data.leaderboard && data.leaderboard.length > 0) {
+            tbody.innerHTML = data.leaderboard
+              .map((user, index) => {
+                const rank = index + 1;
+                let rankEmoji = "";
+                if (rank === 1) rankEmoji = "🥇 ";
+                else if (rank === 2) rankEmoji = "🥈 ";
+                else if (rank === 3) rankEmoji = "🥉 ";
+
+                const displayName =
+                  user.ens_name ||
+                  `${user.address.slice(0, 6)}...${user.address.slice(-4)}`;
+
+                return `
+                                <tr>
+                                    <td class="rank">${rankEmoji}#${rank}</td>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <div style="width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #FFE600 0%, #FFA500 100%); display: flex; align-items: center; justify-content: center; color: black; font-weight: bold; font-size: 10px;">
+                                                ${displayName.slice(0, 2).toUpperCase()}
+                                            </div>
+                                            <span class="address">${displayName}</span>
+                                        </div>
+                                    </td>
+                                    <td class="balance">$${user.balance.toLocaleString()}</td>
+                                </tr>
+                            `;
+              })
+              .join("");
+          } else {
+            tbody.innerHTML =
+              '<tr><td colspan="3" style="text-align: center; padding: 20px; color: rgba(255,255,255,0.5);">No players yet</td></tr>';
+          }
+        } catch (e) {
+          console.error(e);
+          const tbody = document.getElementById("leaderboard-body");
+          if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #ef4444; padding: 20px;">Failed to load leaderboard</td></tr>`;
+          }
+        }
+      }
+
+      // Load on mount
+      loadLeaderboard();
+    </script>
+  </body>
+</html>

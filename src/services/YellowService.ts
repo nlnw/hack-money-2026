@@ -23,7 +23,7 @@ export class YellowService {
             if (this.isConnected) {
                 this.notifyListeners();
             }
-        }, 3000);
+        }, 1000);
     }
 
     async connect(walletClient: WalletClient, address: string) {
@@ -44,7 +44,7 @@ export class YellowService {
             } as any);
             this.signer = new WalletStateSigner(walletClient as any);
 
-            await new Promise(r => setTimeout(r, 800)); // Sim delay
+            await new Promise(r => setTimeout(r, 200)); // Sim delay
             console.log('Yellow SDK: Connected!');
             this.isConnected = true;
             this.notifyListeners();
@@ -60,7 +60,7 @@ export class YellowService {
             console.log('Yellow SDK: Creating App State Update...');
         }
 
-        await new Promise(r => setTimeout(r, 300));
+        await new Promise(r => setTimeout(r, 100));
         console.log(`Yellow SDK: Signed "Balance - ${amount} | Prediction: ${prediction}"`);
         this.notifyListeners();
     }

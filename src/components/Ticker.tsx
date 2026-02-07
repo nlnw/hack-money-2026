@@ -6,7 +6,7 @@ export function Ticker() {
     if (!state || state.bets.length === 0) {
         return (
             <footer className="ticker">
-                <p>Waiting for bets... Get in the game!</p>
+                <p style={{ paddingLeft: '1rem', paddingRight: '1rem' }}>Waiting for bets... Get in the game!</p>
             </footer>
         );
     }
