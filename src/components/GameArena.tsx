@@ -3,6 +3,7 @@ import { useGameState } from '../hooks/useGameState';
 import { useEffect, useState } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { yellowService } from '../services/YellowService';
+import toast, { Toaster } from 'react-hot-toast';
 
 export function GameArena() {
     const { address } = useAccount();
@@ -10,54 +11,28 @@ export function GameArena() {
     const { data: walletClient } = useWalletClient();
     const { state, connected, placeBet } = useGameState();
     const [localPot, setLocalPot] = useState(0);
-    const [balance, setBalance] = useState(1000); // Simulated Start Balance
+    const [balance, setBalance] = useState<number | null>(null);
+    const [balanceLoading, setBalanceLoading] = useState(false);
     const [customName, setCustomName] = useState<string>('');
-    // --- Notification System ---
-    interface Notification {
-        id: string;
-        message: string;
-        type: 'success' | 'error' | 'info';
-        timestamp: number;
-        expired?: boolean;
-    }
+    const [yellowConnected, setYellowConnected] = useState(false);
 
-    const [notifications, setNotifications] = useState<Notification[]>([]);
-    const [showHistory, setShowHistory] = useState(false);
-
-    // Load from LocalStorage on mount
+    // Fetch balance from D1 on mount
     useEffect(() => {
-        const saved = localStorage.getItem('snapbet_notifications');
-        if (saved) {
-            try {
-                setNotifications(JSON.parse(saved));
-            } catch (e) {
-                console.error("Failed to parse notifications", e);
-            }
+        if (address && !balanceLoading && balance === null) {
+            setBalanceLoading(true);
+            fetch(`/api/balance?address=${address}`)
+                .then(res => res.json())
+                .then(data => {
+                    setBalance(data.balance ?? 1000);
+                    setBalanceLoading(false);
+                })
+                .catch(err => {
+                    console.error('Failed to fetch balance:', err);
+                    setBalance(1000);
+                    setBalanceLoading(false);
+                });
         }
-    }, []);
-
-    // Save to LocalStorage on change
-    useEffect(() => {
-        localStorage.setItem('snapbet_notifications', JSON.stringify(notifications));
-    }, [notifications]);
-
-    const addNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
-        const id = Date.now().toString() + Math.random().toString().slice(2);
-        const newNotif: Notification = {
-            id,
-            message,
-            type,
-            timestamp: Date.now(),
-            expired: false
-        };
-        setNotifications(prev => [newNotif, ...prev].slice(0, 50)); // Keep last 50
-
-        // Auto-dismiss after 5 seconds
-        setTimeout(() => {
-            setNotifications(prev => prev.map(n => n.id === id ? { ...n, expired: true } : n));
-        }, 5000);
-    };
-    // ---------------------------
+    }, [address, balanceLoading, balance]);
 
     useEffect(() => {
         if (state) {
@@ -68,7 +43,9 @@ export function GameArena() {
     // Connect to Yellow SDK when wallet is available
     useEffect(() => {
         if (walletClient && address) {
-            yellowService.connect(walletClient, address);
+            yellowService.connect(walletClient, address).then(() => {
+                setYellowConnected(yellowService.isConnected);
+            });
         }
     }, [walletClient, address]);
 
@@ -80,42 +57,52 @@ export function GameArena() {
 
     const handleBet = async (type: 'RUN' | 'PASS') => {
         if (!address) return;
-        if (balance < 5) {
-            addNotification("Insufficient Funds!", 'error');
+        if (balance === null || balance < 5) {
+            toast.error("Insufficient Funds!");
             return;
         }
 
-        // Yellow SDK Flow
-        await yellowService.placeBet(5, type);
+        // Yellow SDK Flow - State channel bet
+        const yellowPromise = yellowService.placeBet(5, type);
+        toast.promise(yellowPromise, {
+            loading: '🟡 Yellow: Processing state channel...',
+            success: '🟡 Yellow: Bet recorded on-chain!',
+            error: '🟡 Yellow: State channel error'
+        });
 
         // Update Backend
-        // Use custom name if provided, otherwise fallback to ENS or null
         const displayName = customName || ensName || undefined;
         try {
             const res: any = await placeBet(address, type, 5, displayName);
 
             if (res.error) {
-                addNotification(res.error, 'error');
+                toast.error(res.error);
                 return;
             }
 
-            // Update Local State
-            // If refund, add it back
-            let newBalance = balance - 5;
+            // Calculate new balance
+            let delta = -5;
             if (res && res.refund) {
-                newBalance += res.refund;
-                addNotification(res.message, 'success');
+                delta += res.refund;
+                toast.success(res.message);
             } else if (res.message) {
-                addNotification(res.message, 'success');
+                toast.success(res.message);
             }
 
-            setBalance(newBalance);
+            // Update balance in D1
+            const balanceRes = await fetch('/api/balance', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ address, delta, ensName: displayName })
+            });
+            const balanceData = await balanceRes.json();
+            if (balanceData.newBalance !== undefined) {
+                setBalance(balanceData.newBalance);
+            }
         } catch (e) {
             console.error("Bet Error", e);
-            addNotification("Failed to place bet. Try again.", 'error');
+            toast.error("Failed to place bet. Try again.");
         }
-
-
     };
 
     if (!address) {
@@ -130,116 +117,59 @@ export function GameArena() {
         );
     }
 
-    // Register Name UI
     const displayName = customName || ensName || (address.slice(0, 6) + '...' + address.slice(-4));
 
     return (
         <div className="game-arena-container" style={{ position: 'relative', overflow: 'hidden' }}>
+            {/* React Hot Toast Container */}
+            <Toaster
+                position="top-right"
+                toastOptions={{
+                    duration: 4000,
+                    style: {
+                        background: '#1a1a2e',
+                        color: '#fff',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                    },
+                    success: {
+                        iconTheme: { primary: '#10b981', secondary: '#fff' },
+                    },
+                    error: {
+                        iconTheme: { primary: '#ef4444', secondary: '#fff' },
+                    },
+                }}
+            />
 
-            {/* Notification Stack (Recent 3 Active) */}
+            {/* Yellow Network Badge */}
             <div style={{
                 position: 'absolute',
                 top: '20px',
-                right: '20px',
+                left: '20px',
+                background: yellowConnected ? 'linear-gradient(135deg, #FFE600 0%, #FFA500 100%)' : 'rgba(100,100,100,0.5)',
+                color: yellowConnected ? '#000' : '#888',
+                padding: '8px 16px',
+                borderRadius: '20px',
+                fontSize: '0.85rem',
+                fontWeight: 'bold',
                 display: 'flex',
-                flexDirection: 'column',
-                gap: '10px',
-                zIndex: 1000,
-                pointerEvents: 'none' // Let clicks pass through container
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: yellowConnected ? '0 0 20px rgba(255,230,0,0.3)' : 'none',
+                zIndex: 100
             }}>
-                {notifications.filter(n => !n.expired).slice(0, 3).map((note) => (
-                    <div key={note.id} style={{
-                        background: note.type === 'error' ? 'rgba(239, 68, 68, 0.9)' : 'rgba(16, 185, 129, 0.9)',
-                        color: 'white',
-                        padding: '1rem',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 6px rgba(0,0,0,0.2)',
-                        animation: 'slideIn 0.3s ease-out',
-                        minWidth: '250px',
-                        backdropFilter: 'blur(4px)',
-                        pointerEvents: 'auto', // Re-enable clicks
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'start'
-                    }}>
-                        <div>
-                            <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>{new Date(note.timestamp).toLocaleTimeString()}</div>
-                            <div style={{ fontWeight: 'bold' }}>{note.message}</div>
-                        </div>
-                        <button
-                            onClick={() => setNotifications(prev => prev.map(n => n.id === note.id ? { ...n, expired: true } : n))}
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: 'white',
-                                cursor: 'pointer',
-                                fontSize: '1.2rem',
-                                padding: '0 0 0 10px',
-                                lineHeight: '1'
-                            }}
-                        >
-                            &times;
-                        </button>
-                    </div>
-                ))}
+                <span style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: yellowConnected ? '#00FF00' : '#666',
+                    boxShadow: yellowConnected ? '0 0 6px #00FF00' : 'none'
+                }} />
+                🟡 Yellow Network {yellowConnected ? 'Connected' : 'Connecting...'}
             </div>
-
-            {/* History Panel Modal */}
-            {showHistory && (
-                <div style={{
-                    position: 'absolute',
-                    top: '70px',
-                    left: '20px',
-                    width: '320px',
-                    maxHeight: '500px',
-                    background: 'rgba(20, 20, 20, 0.95)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '16px',
-                    zIndex: 1100,
-                    overflowY: 'auto',
-                    padding: '16px',
-                    backdropFilter: 'blur(12px)',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
-                }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px' }}>
-                        <h4 style={{ margin: 0, color: '#fff', fontSize: '1.1rem' }}>🔔 Activity Log</h4>
-                        <button
-                            onClick={() => setNotifications([])}
-                            style={{
-                                background: 'transparent',
-                                border: '1px solid rgba(255,255,255,0.2)',
-                                borderRadius: '4px',
-                                color: '#aaa',
-                                cursor: 'pointer',
-                                fontSize: '0.75rem',
-                                padding: '4px 8px'
-                            }}
-                        >
-                            Clear
-                        </button>
-                    </div>
-                    {notifications.length === 0 ? (
-                        <div style={{ color: '#666', textAlign: 'center', padding: '30px 0', fontStyle: 'italic' }}>No recent activity</div>
-                    ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {notifications.map(note => (
-                                <div key={note.id} style={{
-                                    padding: '10px',
-                                    background: 'rgba(255,255,255,0.03)',
-                                    borderRadius: '8px',
-                                    borderLeft: `3px solid ${note.type === 'error' ? '#ef4444' : note.type === 'success' ? '#10b981' : '#3b82f6'}`
-                                }}>
-                                    <div style={{ fontSize: '0.7em', color: '#888', marginBottom: '4px' }}>{new Date(note.timestamp).toLocaleTimeString()}</div>
-                                    <div style={{ color: '#eee', fontSize: '0.9rem', lineHeight: '1.4' }}>{note.message}</div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            )}
 
             <div className="stats-bar" style={{
                 marginBottom: '1rem',
+                marginTop: '60px',
                 display: 'flex',
                 justifyContent: 'space-between',
                 padding: '0.75rem 1.5rem',
@@ -250,38 +180,6 @@ export function GameArena() {
                 border: '1px solid rgba(255,255,255,0.05)'
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                    <button
-                        onClick={() => setShowHistory(!showHistory)}
-                        title="View History"
-                        style={{
-                            background: showHistory ? 'rgba(255,255,255,0.1)' : 'transparent',
-                            border: 'none',
-                            cursor: 'pointer',
-                            fontSize: '1.2rem',
-                            padding: '8px',
-                            borderRadius: '50%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.2s'
-                        }}
-                    >
-                        🔔
-                        {notifications.length > 0 && !showHistory && (
-                            <span style={{
-                                position: 'absolute',
-                                top: '0',
-                                right: '0',
-                                width: '8px',
-                                height: '8px',
-                                background: '#ef4444',
-                                borderRadius: '50%'
-                            }} />
-                        )}
-                    </button>
-
-                    <div style={{ height: '24px', width: '1px', background: 'rgba(255,255,255,0.1)' }}></div> {/* Separator */}
-
                     <span>👤 {displayName}</span>
                     {(!ensName && !customName) && (
                         <button
@@ -296,7 +194,9 @@ export function GameArena() {
                     )}
                 </div>
                 <span>🏁 Round #{state.roundId}</span>
-                <span style={{ color: '#FFE600', fontWeight: 'bold', fontSize: '1.1rem', textShadow: '0 0 10px rgba(255, 230, 0, 0.3)' }}>💰 ${balance}</span>
+                <span style={{ color: '#FFE600', fontWeight: 'bold', fontSize: '1.1rem', textShadow: '0 0 10px rgba(255, 230, 0, 0.3)' }}>
+                    💰 ${balance !== null ? balance : '...'}
+                </span>
             </div>
 
             <div className="timer-section">
