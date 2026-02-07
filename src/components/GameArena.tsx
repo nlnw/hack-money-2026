@@ -236,6 +236,16 @@ export function GameArena() {
     const [customName, setCustomName] = useState<string>('');
     const [yellowConnected, setYellowConnected] = useState(false);
     const [streak, setStreak] = useState(0);
+    const [showResult, setShowResult] = useState(false);
+
+    // Auto-show and auto-dismiss result overlay
+    useEffect(() => {
+        if (state?.status === 'RESOLVING' && state?.lastResult) {
+            setShowResult(true);
+            const timer = setTimeout(() => setShowResult(false), 3500);
+            return () => clearTimeout(timer);
+        }
+    }, [state?.status, state?.lastResult]);
 
     // Live betting stats
     const bettingStats = useMemo(() => {
@@ -456,13 +466,34 @@ export function GameArena() {
             </div>
 
             {/* Result Overlay */}
-            {state.lastResult && state.status === 'RESOLVING' && (
-                <div style={styles.resultOverlay(state.lastResult)}>
+            {showResult && state.lastResult && (
+                <div
+                    style={styles.resultOverlay(state.lastResult)}
+                    onClick={() => setShowResult(false)}
+                >
                     <h1 style={styles.resultText(state.lastResult)}>
                         {state.lastResult === 'RUN' ? '🏃' : '🏈'} {state.lastResult}!
                     </h1>
                     <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '1.2rem' }}>
                         {state.lastResult === 'RUN' ? 'The QB ran!' : 'The QB passed!'}
+                    </p>
+                    <button
+                        onClick={() => setShowResult(false)}
+                        style={{
+                            marginTop: '2rem',
+                            padding: '0.75rem 2rem',
+                            background: 'rgba(255,255,255,0.1)',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            borderRadius: '12px',
+                            color: '#fff',
+                            cursor: 'pointer',
+                            fontSize: '1rem',
+                        }}
+                    >
+                        Continue
+                    </button>
+                    <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', marginTop: '1rem' }}>
+                        Tap anywhere or wait to dismiss
                     </p>
                 </div>
             )}
