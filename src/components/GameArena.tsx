@@ -18,6 +18,7 @@ export function GameArena() {
         message: string;
         type: 'success' | 'error' | 'info';
         timestamp: number;
+        expired?: boolean;
     }
 
     const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -41,13 +42,20 @@ export function GameArena() {
     }, [notifications]);
 
     const addNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+        const id = Date.now().toString() + Math.random().toString().slice(2);
         const newNotif: Notification = {
-            id: Date.now().toString() + Math.random().toString().slice(2),
+            id,
             message,
             type,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            expired: false
         };
         setNotifications(prev => [newNotif, ...prev].slice(0, 50)); // Keep last 50
+
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            setNotifications(prev => prev.map(n => n.id === id ? { ...n, expired: true } : n));
+        }, 5000);
     };
     // ---------------------------
 
@@ -128,7 +136,7 @@ export function GameArena() {
     return (
         <div className="game-arena-container" style={{ position: 'relative', overflow: 'hidden' }}>
 
-            {/* Notification Stack (Recent 3) */}
+            {/* Notification Stack (Recent 3 Active) */}
             <div style={{
                 position: 'absolute',
                 top: '20px',
@@ -137,9 +145,9 @@ export function GameArena() {
                 flexDirection: 'column',
                 gap: '10px',
                 zIndex: 1000,
-                pointerEvents: 'none' // Let clicks pass through
+                pointerEvents: 'none' // Let clicks pass through container
             }}>
-                {notifications.slice(0, 3).map((note) => (
+                {notifications.filter(n => !n.expired).slice(0, 3).map((note) => (
                     <div key={note.id} style={{
                         background: note.type === 'error' ? 'rgba(239, 68, 68, 0.9)' : 'rgba(16, 185, 129, 0.9)',
                         color: 'white',
@@ -148,10 +156,30 @@ export function GameArena() {
                         boxShadow: '0 4px 6px rgba(0,0,0,0.2)',
                         animation: 'slideIn 0.3s ease-out',
                         minWidth: '250px',
-                        backdropFilter: 'blur(4px)'
+                        backdropFilter: 'blur(4px)',
+                        pointerEvents: 'auto', // Re-enable clicks
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'start'
                     }}>
-                        <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>{new Date(note.timestamp).toLocaleTimeString()}</div>
-                        <div style={{ fontWeight: 'bold' }}>{note.message}</div>
+                        <div>
+                            <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>{new Date(note.timestamp).toLocaleTimeString()}</div>
+                            <div style={{ fontWeight: 'bold' }}>{note.message}</div>
+                        </div>
+                        <button
+                            onClick={() => setNotifications(prev => prev.map(n => n.id === note.id ? { ...n, expired: true } : n))}
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: 'white',
+                                cursor: 'pointer',
+                                fontSize: '1.2rem',
+                                padding: '0 0 0 10px',
+                                lineHeight: '1'
+                            }}
+                        >
+                            &times;
+                        </button>
                     </div>
                 ))}
             </div>
