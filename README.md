@@ -56,7 +56,12 @@ SnapBet is a fast-paced prediction game where players bet on whether the quarter
 #### Yellow - $15,000
 
 **How are you using this Protocol / API?**
-We use Yellow Network's state channel infrastructure to enable high-frequency, gasless betting. The [`YellowService`](src/services/YellowService.ts#L13-L80) manages the lifecycle of state channels—opening (see [`connect`](src/services/YellowService.ts#L29)), updating with signed bets (see [`placeBet`](src/services/YellowService.ts#L56)), and closing with final settlements—allowing for a seamless, instant user experience that traditional on-chain transactions cannot match.
+We use Yellow Network's state channel infrastructure to enable high-frequency, gasless betting. The `YellowService` manages the lifecycle of state channels—opening, updating with signed bets, and closing with final settlements—allowing for a seamless, instant user experience that traditional on-chain transactions cannot match.
+
+**Code Links**
+https://github.com/nlnw/hack-money-2026/blob/main/src/services/YellowService.ts#L13
+https://github.com/nlnw/hack-money-2026/blob/main/src/services/YellowService.ts#L29
+https://github.com/nlnw/hack-money-2026/blob/main/src/services/YellowService.ts#L56
 
 **How easy is it to use the API / Protocol? (1 - very difficult, 10 - very easy)**
 8
@@ -64,7 +69,12 @@ We use Yellow Network's state channel infrastructure to enable high-frequency, g
 #### ENS - $5,000
 
 **How are you using this Protocol / API?**
-We integrated ENS to provide a social identity layer. The application uses `wagmi` hooks (`useEnsName`, `useEnsAvatar`) to reverse-resolve user addresses to their primary ENS names and avatars. This is displayed in the user's profile badge (see [`GameArena.tsx:L230-L238`](src/components/GameArena.tsx#L230-L238)) and on the live leaderboard (see [`Leaderboard.tsx:L7-L18`](src/components/Leaderboard.tsx#L7-L18)), making the game more engaging and personal.
+We integrated ENS to provide a social identity layer. The application uses `wagmi` hooks (`useEnsName`, `useEnsAvatar`) to reverse-resolve user addresses to their primary ENS names and avatars. This is displayed in the user's profile badge and on the live leaderboard, making the game more engaging and personal.
+
+**Code Links**
+https://github.com/nlnw/hack-money-2026/blob/main/src/components/GameArena.tsx#L238
+https://github.com/nlnw/hack-money-2026/blob/main/src/components/Leaderboard.tsx#L15
+https://github.com/nlnw/hack-money-2026/blob/main/src/components/GameArena.tsx#L411
 
 **How easy is it to use the API / Protocol? (1 - very difficult, 10 - very easy)**
 10
