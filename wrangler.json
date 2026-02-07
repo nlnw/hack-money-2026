@@ -1,16 +1,17 @@
 {
-	"name": "snapbet",
-	"compatibility_date": "2026-01-01",
-	"compatibility_flags": [
-		"nodejs_compat",
-		"disable_nodejs_process_v2"
-	],
-	"pages_build_output_dir": "./dist",
-	"d1_databases": [
-		{
-			"binding": "DB",
-			"database_name": "snapbet",
-			"database_id": "7ffa780d-aeb2-4c8a-87d7-00a12aa21a69"
-		}
-	]
+    "name": "snapbet",
+    "compatibility_date": "2026-01-01",
+    "compatibility_flags": [
+        "nodejs_compat",
+        "disable_nodejs_process_v2"
+    ],
+    "pages_build_output_dir": "./dist",
+    "d1_databases": [
+        {
+            "binding": "DB",
+            "database_name": "snapbet",
+            "database_id": "7ffa780d-aeb2-4c8a-87d7-00a12aa21a69",
+            "remote": true
+        }
+    ]
 }
