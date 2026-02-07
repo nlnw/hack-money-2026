@@ -15,6 +15,12 @@ export function GameArena() {
     const [isRegistering, setIsRegistering] = useState(false);
 
 
+    const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+
+    const showNotification = (message: string, type: 'success' | 'error') => {
+        setNotification({ message, type });
+        setTimeout(() => setNotification(null), 3000);
+    };
 
     useEffect(() => {
         if (state) {
@@ -38,7 +44,7 @@ export function GameArena() {
     const handleBet = async (type: 'RUN' | 'PASS') => {
         if (!address) return;
         if (balance < 5) {
-            alert("Insufficient Funds!");
+            showNotification("Insufficient Funds!", 'error');
             return;
         }
 
@@ -54,7 +60,7 @@ export function GameArena() {
             const res: any = await placeBet(address, type, 5, displayName);
 
             if (res.error) {
-                alert(res.error);
+                showNotification(res.error, 'error');
                 return;
             }
 
@@ -63,13 +69,15 @@ export function GameArena() {
             let newBalance = balance - 5;
             if (res && res.refund) {
                 newBalance += res.refund;
-                alert(res.message);
+                showNotification(res.message, 'success');
+            } else if (res.message) {
+                showNotification(res.message, 'success');
             }
 
             setBalance(newBalance);
         } catch (e) {
             console.error("Bet Error", e);
-            alert("Failed to place bet. Try again.");
+            showNotification("Failed to place bet. Try again.", 'error');
         }
 
 
@@ -91,7 +99,27 @@ export function GameArena() {
     const displayName = customName || ensName || (address.slice(0, 6) + '...' + address.slice(-4));
 
     return (
-        <div className="game-arena-container">
+        <div className="game-arena-container" style={{ position: 'relative' }}>
+            {/* Notification Toast */}
+            {notification && (
+                <div style={{
+                    position: 'absolute',
+                    top: '20px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: notification.type === 'error' ? 'rgba(239, 68, 68, 0.9)' : 'rgba(16, 185, 129, 0.9)',
+                    color: 'white',
+                    padding: '1rem 2rem',
+                    borderRadius: '8px',
+                    zIndex: 1000,
+                    fontWeight: 'bold',
+                    boxShadow: '0 4px 6px rgba(0,0,0,0.2)',
+                    animation: 'fadeIn 0.3s ease-out'
+                }}>
+                    {notification.message}
+                </div>
+            )}
+
             <div className="stats-bar" style={{
                 marginBottom: '1rem',
                 display: 'flex',
