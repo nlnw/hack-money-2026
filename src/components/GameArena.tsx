@@ -12,15 +12,44 @@ export function GameArena() {
     const [localPot, setLocalPot] = useState(0);
     const [balance, setBalance] = useState(1000); // Simulated Start Balance
     const [customName, setCustomName] = useState<string>('');
-    const [isRegistering, setIsRegistering] = useState(false);
+    // --- Notification System ---
+    interface Notification {
+        id: string;
+        message: string;
+        type: 'success' | 'error' | 'info';
+        timestamp: number;
+    }
 
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [showHistory, setShowHistory] = useState(false);
 
-    const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+    // Load from LocalStorage on mount
+    useEffect(() => {
+        const saved = localStorage.getItem('snapbet_notifications');
+        if (saved) {
+            try {
+                setNotifications(JSON.parse(saved));
+            } catch (e) {
+                console.error("Failed to parse notifications", e);
+            }
+        }
+    }, []);
 
-    const showNotification = (message: string, type: 'success' | 'error') => {
-        setNotification({ message, type });
-        setTimeout(() => setNotification(null), 3000);
+    // Save to LocalStorage on change
+    useEffect(() => {
+        localStorage.setItem('snapbet_notifications', JSON.stringify(notifications));
+    }, [notifications]);
+
+    const addNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+        const newNotif: Notification = {
+            id: Date.now().toString() + Math.random().toString().slice(2),
+            message,
+            type,
+            timestamp: Date.now()
+        };
+        setNotifications(prev => [newNotif, ...prev].slice(0, 50)); // Keep last 50
     };
+    // ---------------------------
 
     useEffect(() => {
         if (state) {
@@ -44,7 +73,7 @@ export function GameArena() {
     const handleBet = async (type: 'RUN' | 'PASS') => {
         if (!address) return;
         if (balance < 5) {
-            showNotification("Insufficient Funds!", 'error');
+            addNotification("Insufficient Funds!", 'error');
             return;
         }
 
@@ -53,14 +82,12 @@ export function GameArena() {
 
         // Update Backend
         // Use custom name if provided, otherwise fallback to ENS or null
-        // Update Backend
-        // Use custom name if provided, otherwise fallback to ENS or null
         const displayName = customName || ensName || undefined;
         try {
             const res: any = await placeBet(address, type, 5, displayName);
 
             if (res.error) {
-                showNotification(res.error, 'error');
+                addNotification(res.error, 'error');
                 return;
             }
 
@@ -69,15 +96,15 @@ export function GameArena() {
             let newBalance = balance - 5;
             if (res && res.refund) {
                 newBalance += res.refund;
-                showNotification(res.message, 'success');
+                addNotification(res.message, 'success');
             } else if (res.message) {
-                showNotification(res.message, 'success');
+                addNotification(res.message, 'success');
             }
 
             setBalance(newBalance);
         } catch (e) {
             console.error("Bet Error", e);
-            showNotification("Failed to place bet. Try again.", 'error');
+            addNotification("Failed to place bet. Try again.", 'error');
         }
 
 
@@ -99,24 +126,89 @@ export function GameArena() {
     const displayName = customName || ensName || (address.slice(0, 6) + '...' + address.slice(-4));
 
     return (
-        <div className="game-arena-container" style={{ position: 'relative' }}>
-            {/* Notification Toast */}
-            {notification && (
-                <div style={{
+        <div className="game-arena-container" style={{ position: 'relative', overflow: 'hidden' }}>
+
+            {/* Notification Stack (Recent 3) */}
+            <div style={{
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+                zIndex: 1000,
+                pointerEvents: 'none' // Let clicks pass through
+            }}>
+                {notifications.slice(0, 3).map((note) => (
+                    <div key={note.id} style={{
+                        background: note.type === 'error' ? 'rgba(239, 68, 68, 0.9)' : 'rgba(16, 185, 129, 0.9)',
+                        color: 'white',
+                        padding: '1rem',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px rgba(0,0,0,0.2)',
+                        animation: 'slideIn 0.3s ease-out',
+                        minWidth: '250px',
+                        backdropFilter: 'blur(4px)'
+                    }}>
+                        <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>{new Date(note.timestamp).toLocaleTimeString()}</div>
+                        <div style={{ fontWeight: 'bold' }}>{note.message}</div>
+                    </div>
+                ))}
+            </div>
+
+            {/* History Toggle Button */}
+            <button
+                onClick={() => setShowHistory(!showHistory)}
+                style={{
                     position: 'absolute',
                     top: '20px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: notification.type === 'error' ? 'rgba(239, 68, 68, 0.9)' : 'rgba(16, 185, 129, 0.9)',
+                    left: '20px',
+                    zIndex: 1100,
+                    background: '#333',
+                    border: '1px solid #555',
                     color: 'white',
-                    padding: '1rem 2rem',
+                    padding: '8px 12px',
                     borderRadius: '8px',
-                    zIndex: 1000,
-                    fontWeight: 'bold',
-                    boxShadow: '0 4px 6px rgba(0,0,0,0.2)',
-                    animation: 'fadeIn 0.3s ease-out'
+                    cursor: 'pointer'
+                }}
+            >
+                🔔 History
+            </button>
+
+            {/* History Panel Modal */}
+            {showHistory && (
+                <div style={{
+                    position: 'absolute',
+                    top: '60px',
+                    left: '20px',
+                    width: '300px',
+                    maxHeight: '400px',
+                    background: 'rgba(0,0,0,0.9)',
+                    border: '1px solid #444',
+                    borderRadius: '12px',
+                    zIndex: 1100,
+                    overflowY: 'auto',
+                    padding: '10px',
+                    backdropFilter: 'blur(10px)'
                 }}>
-                    {notification.message}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', borderBottom: '1px solid #333', paddingBottom: '5px' }}>
+                        <h4 style={{ margin: 0, color: '#fff' }}>Notification History</h4>
+                        <button onClick={() => setNotifications([])} style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer', fontSize: '0.8rem' }}>Clear</button>
+                    </div>
+                    {notifications.length === 0 ? (
+                        <div style={{ color: '#666', textAlign: 'center', padding: '20px' }}>No notifications</div>
+                    ) : (
+                        notifications.map(note => (
+                            <div key={note.id} style={{
+                                padding: '8px',
+                                borderBottom: '1px solid #333',
+                                marginBottom: '5px'
+                            }}>
+                                <div style={{ fontSize: '0.7em', color: '#888' }}>{new Date(note.timestamp).toLocaleString()}</div>
+                                <div style={{ color: note.type === 'error' ? '#ff6b6b' : '#51cf66' }}>{note.message}</div>
+                            </div>
+                        ))
+                    )}
                 </div>
             )}
 
