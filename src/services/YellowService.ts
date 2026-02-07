@@ -18,22 +18,12 @@ export class YellowService {
     private listeners: ((state: any) => void)[] = [];
 
     constructor() {
-        try {
-            this.client = new NitroliteClient({
-                transport: { url: CLEARNODE_URL },
-                publicClient
-            } as any);
-
-            // Mock receiving updates from "Network"
-            setInterval(() => {
-                if (this.isConnected) {
-                    this.notifyListeners();
-                }
-            }, 3000);
-
-        } catch (e) {
-            console.warn("Yellow SDK Init Error", e);
-        }
+        // Mock receiving updates from "Network"
+        setInterval(() => {
+            if (this.isConnected) {
+                this.notifyListeners();
+            }
+        }, 3000);
     }
 
     async connect(walletClient: WalletClient, address: string) {
@@ -41,6 +31,11 @@ export class YellowService {
 
         try {
             console.log('Yellow SDK: Connecting to ClearNode...');
+            this.client = new NitroliteClient({
+                transport: { url: CLEARNODE_URL },
+                publicClient,
+                walletClient
+            } as any);
             this.signer = new WalletStateSigner(walletClient as any);
 
             await new Promise(r => setTimeout(r, 800)); // Sim delay

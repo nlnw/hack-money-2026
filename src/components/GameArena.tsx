@@ -9,6 +9,10 @@ export function GameArena() {
     const { data: ensName } = useEnsName({ address });
     const { data: walletClient } = useWalletClient();
     const { state, connected, placeBet } = useGameState();
+    const [localPot, setLocalPot] = useState(0);
+    const [balance, setBalance] = useState(1000); // Simulated Start Balance
+    const [customName, setCustomName] = useState<string>('');
+    const [isRegistering, setIsRegistering] = useState(false);
 
 
 
