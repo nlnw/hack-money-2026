@@ -33,20 +33,40 @@ export function useGameState() {
     const [connected, setConnected] = useState(false);
 
     // Polling Version
-    useEffect(() => {
-        const interval = setInterval(async () => {
-            try {
-                const res = await fetch('/api/gameState');
-                const data = await res.json() as FrontendGameState;
-                setState(data);
-                setConnected(true);
-            } catch (e) {
-                console.error("Polling error", e);
-                setConnected(false);
-            }
-        }, 1000);
-        return () => clearInterval(interval);
+    // Polling Version - Reduced Frequence
+    const fetchState = useCallback(async () => {
+        try {
+            const res = await fetch('/api/gameState');
+            const data = await res.json() as FrontendGameState;
+            setState(data);
+            setConnected(true);
+        } catch (e) {
+            console.error("Polling error", e);
+            setConnected(false);
+        }
     }, []);
+
+    useEffect(() => {
+        // Initial Fetch
+        fetchState();
+
+        // Slow Poll fallback (every 5 seconds instead of 1s)
+        const interval = setInterval(fetchState, 5000);
+
+        // Subscribe to Yellow Service for "Push" updates
+        // In a real implementation, yellowService would pass the new state directly
+        // Here we just trigger a fetch when it says something changed
+        const unsubscribe = (import('../services/YellowService').then(({ yellowService }) => {
+            return yellowService.subscribe(() => {
+                fetchState();
+            });
+        }));
+
+        return () => {
+            clearInterval(interval);
+            unsubscribe.then(unsub => unsub && unsub());
+        };
+    }, [fetchState]);
 
     const placeBet = useCallback(async (address: string, prediction: BetType, amount: number, ensName?: string) => {
         const payload = {
@@ -55,13 +75,14 @@ export function useGameState() {
             prediction,
             ensName
         };
-        await fetch('/api/gameState', {
+        const res = await fetch('/api/gameState', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ type: 'BET', payload })
         });
+        return await res.json();
     }, []);
 
     const adminStart = useCallback(async () => {

@@ -79,6 +79,46 @@ export const POST: APIRoute = async ({ request }) => {
             if (state.status !== 'OPEN') return new Response("Game Locked", { status: 400 });
 
             const { userAddress, amount, prediction, ensName } = data.payload;
+
+            // Check if user already bet
+            const existingBetIndex = state.bets.findIndex(b => b.userAddress === userAddress);
+            let refund = 0;
+            let finalAmount = amount;
+
+            if (existingBetIndex !== -1) {
+                const existingBet = state.bets[existingBetIndex];
+
+                if (existingBet.prediction === prediction) {
+                    // Same side: Just add to the bet
+                    existingBet.amount += amount;
+                    state.pot += amount;
+                    return new Response(JSON.stringify({ success: true, state, message: "Bet increased!" }));
+                } else {
+                    // Switching sides: Apply penalty
+                    // Penalty is 10% of the EXISTING bet
+                    const penalty = Math.floor(existingBet.amount * 0.1);
+                    refund = existingBet.amount - penalty;
+
+                    // Remove old bet from pot
+                    state.pot -= existingBet.amount;
+
+                    // Remove old bet
+                    state.bets.splice(existingBetIndex, 1);
+
+                    // Add new bet
+                    state.bets.push({
+                        userAddress,
+                        amount: amount,
+                        prediction,
+                        ensName,
+                        timestamp: Date.now()
+                    });
+                    state.pot += amount;
+
+                    return new Response(JSON.stringify({ success: true, state, refund, message: `Switched sides! Refunded ${refund} (Penalty: ${penalty})` }));
+                }
+            }
+
             state.bets.push({
                 userAddress,
                 amount,

@@ -9,9 +9,19 @@ export class YellowService {
     private signer: any;
     private isConnected = false;
 
+    private listeners: ((state: any) => void)[] = [];
+
     constructor() {
         try {
             this.client = new NitroliteClient({ transport: { url: CLEARNODE_URL } } as any);
+
+            // Mock receiving updates from "Network"
+            setInterval(() => {
+                if (this.isConnected) {
+                    this.notifyListeners();
+                }
+            }, 3000);
+
         } catch (e) {
             console.warn("Yellow SDK Init Error", e);
         }
@@ -27,6 +37,7 @@ export class YellowService {
             await new Promise(r => setTimeout(r, 800)); // Sim delay
             console.log('Yellow SDK: Connected!');
             this.isConnected = true;
+            this.notifyListeners();
         } catch (error) {
             console.error('Yellow SDK Connection Error:', error);
         }
@@ -41,6 +52,20 @@ export class YellowService {
 
         await new Promise(r => setTimeout(r, 300));
         console.log(`Yellow SDK: Signed "Balance - ${amount} | Prediction: ${prediction}"`);
+        this.notifyListeners();
+    }
+
+    subscribe(callback: (state: any) => void) {
+        this.listeners.push(callback);
+        return () => {
+            this.listeners = this.listeners.filter(l => l !== callback);
+        };
+    }
+
+    private notifyListeners() {
+        // In a real app, this would push data from the SDK
+        // For now, we signal that "something changed" so the app extracts the latest state
+        this.listeners.forEach(l => l({ updated: true }));
     }
 }
 

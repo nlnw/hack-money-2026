@@ -9,8 +9,8 @@ export function GameArena() {
     const { data: ensName } = useEnsName({ address });
     const { data: walletClient } = useWalletClient();
     const { state, connected, placeBet } = useGameState();
-    const [localPot, setLocalPot] = useState(0);
-    const [balance, setBalance] = useState(1000); // Simulated Start Balance
+
+
 
     useEffect(() => {
         if (state) {
@@ -42,10 +42,21 @@ export function GameArena() {
         await yellowService.placeBet(5, type);
 
         // Update Backend
-        placeBet(address, type, 5, ensName || undefined);
+        // Use custom name if provided, otherwise fallback to ENS or null
+        // Update Backend
+        // Use custom name if provided, otherwise fallback to ENS or null
+        const displayName = customName || ensName || undefined;
+        const res: any = await placeBet(address, type, 5, displayName);
 
         // Update Local State
-        setBalance(prev => prev - 5);
+        // If refund, add it back
+        let newBalance = balance - 5;
+        if (res && res.refund) {
+            newBalance += res.refund;
+            alert(res.message);
+        }
+
+        setBalance(newBalance);
     };
 
     if (!address) {
@@ -60,6 +71,9 @@ export function GameArena() {
         );
     }
 
+    // Register Name UI
+    const displayName = customName || ensName || (address.slice(0, 6) + '...' + address.slice(-4));
+
     return (
         <div className="game-arena-container">
             <div className="stats-bar" style={{
@@ -68,8 +82,23 @@ export function GameArena() {
                 justifyContent: 'space-between',
                 padding: '0.5rem 1rem',
                 background: 'rgba(255,255,255,0.1)',
-                borderRadius: '8px'
+                borderRadius: '8px',
+                alignItems: 'center'
             }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span>👤 {displayName}</span>
+                    {(!ensName && !customName) && (
+                        <button
+                            onClick={() => {
+                                const name = prompt("Enter a Game Name (Mock ENS):");
+                                if (name) setCustomName(name.endsWith('.eth') ? name : name + '.eth');
+                            }}
+                            style={{ fontSize: '0.8rem', padding: '2px 8px', background: '#444', border: 'none', borderRadius: '4px', cursor: 'pointer', color: '#fff' }}
+                        >
+                            Set Name
+                        </button>
+                    )}
+                </div>
                 <span>🏁 Round #{state.roundId}</span>
                 <span style={{ color: '#FFE600', fontWeight: 'bold' }}>💰 Balance: ${balance}</span>
             </div>
