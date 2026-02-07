@@ -34,7 +34,8 @@ export class YellowService {
             this.client = new NitroliteClient({
                 transport: { url: CLEARNODE_URL },
                 publicClient,
-                walletClient
+                walletClient,
+                challengeDuration: 3600 // Minimum challenge duration
             } as any);
             this.signer = new WalletStateSigner(walletClient as any);
 
