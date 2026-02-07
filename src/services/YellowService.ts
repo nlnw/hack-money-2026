@@ -37,7 +37,8 @@ export class YellowService {
                 walletClient,
                 challengeDuration: 3600, // Minimum challenge duration
                 addresses: {
-                    custody: '0x0000000000000000000000000000000000000000' // Placeholder/Mock Custody Address
+                    custody: '0x0000000000000000000000000000000000000000', // Placeholder/Mock Custody Address
+                    adjudicator: '0x0000000000000000000000000000000000000000' // Placeholder/Mock Adjudicator Address
                 }
             } as any);
             this.signer = new WalletStateSigner(walletClient as any);
