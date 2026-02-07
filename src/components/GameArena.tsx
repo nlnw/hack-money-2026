@@ -156,58 +156,56 @@ export function GameArena() {
                 ))}
             </div>
 
-            {/* History Toggle Button */}
-            <button
-                onClick={() => setShowHistory(!showHistory)}
-                style={{
-                    position: 'absolute',
-                    top: '20px',
-                    left: '20px',
-                    zIndex: 1100,
-                    background: '#333',
-                    border: '1px solid #555',
-                    color: 'white',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    cursor: 'pointer'
-                }}
-            >
-                🔔 History
-            </button>
-
             {/* History Panel Modal */}
             {showHistory && (
                 <div style={{
                     position: 'absolute',
-                    top: '60px',
+                    top: '70px',
                     left: '20px',
-                    width: '300px',
-                    maxHeight: '400px',
-                    background: 'rgba(0,0,0,0.9)',
-                    border: '1px solid #444',
-                    borderRadius: '12px',
+                    width: '320px',
+                    maxHeight: '500px',
+                    background: 'rgba(20, 20, 20, 0.95)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '16px',
                     zIndex: 1100,
                     overflowY: 'auto',
-                    padding: '10px',
-                    backdropFilter: 'blur(10px)'
+                    padding: '16px',
+                    backdropFilter: 'blur(12px)',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
                 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', borderBottom: '1px solid #333', paddingBottom: '5px' }}>
-                        <h4 style={{ margin: 0, color: '#fff' }}>Notification History</h4>
-                        <button onClick={() => setNotifications([])} style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer', fontSize: '0.8rem' }}>Clear</button>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px' }}>
+                        <h4 style={{ margin: 0, color: '#fff', fontSize: '1.1rem' }}>🔔 Activity Log</h4>
+                        <button
+                            onClick={() => setNotifications([])}
+                            style={{
+                                background: 'transparent',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                borderRadius: '4px',
+                                color: '#aaa',
+                                cursor: 'pointer',
+                                fontSize: '0.75rem',
+                                padding: '4px 8px'
+                            }}
+                        >
+                            Clear
+                        </button>
                     </div>
                     {notifications.length === 0 ? (
-                        <div style={{ color: '#666', textAlign: 'center', padding: '20px' }}>No notifications</div>
+                        <div style={{ color: '#666', textAlign: 'center', padding: '30px 0', fontStyle: 'italic' }}>No recent activity</div>
                     ) : (
-                        notifications.map(note => (
-                            <div key={note.id} style={{
-                                padding: '8px',
-                                borderBottom: '1px solid #333',
-                                marginBottom: '5px'
-                            }}>
-                                <div style={{ fontSize: '0.7em', color: '#888' }}>{new Date(note.timestamp).toLocaleString()}</div>
-                                <div style={{ color: note.type === 'error' ? '#ff6b6b' : '#51cf66' }}>{note.message}</div>
-                            </div>
-                        ))
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {notifications.map(note => (
+                                <div key={note.id} style={{
+                                    padding: '10px',
+                                    background: 'rgba(255,255,255,0.03)',
+                                    borderRadius: '8px',
+                                    borderLeft: `3px solid ${note.type === 'error' ? '#ef4444' : note.type === 'success' ? '#10b981' : '#3b82f6'}`
+                                }}>
+                                    <div style={{ fontSize: '0.7em', color: '#888', marginBottom: '4px' }}>{new Date(note.timestamp).toLocaleTimeString()}</div>
+                                    <div style={{ color: '#eee', fontSize: '0.9rem', lineHeight: '1.4' }}>{note.message}</div>
+                                </div>
+                            ))}
+                        </div>
                     )}
                 </div>
             )}
@@ -216,12 +214,46 @@ export function GameArena() {
                 marginBottom: '1rem',
                 display: 'flex',
                 justifyContent: 'space-between',
-                padding: '0.5rem 1rem',
-                background: 'rgba(255,255,255,0.1)',
-                borderRadius: '8px',
-                alignItems: 'center'
+                padding: '0.75rem 1.5rem',
+                background: 'rgba(20, 20, 20, 0.6)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '16px',
+                alignItems: 'center',
+                border: '1px solid rgba(255,255,255,0.05)'
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <button
+                        onClick={() => setShowHistory(!showHistory)}
+                        title="View History"
+                        style={{
+                            background: showHistory ? 'rgba(255,255,255,0.1)' : 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontSize: '1.2rem',
+                            padding: '8px',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        🔔
+                        {notifications.length > 0 && !showHistory && (
+                            <span style={{
+                                position: 'absolute',
+                                top: '0',
+                                right: '0',
+                                width: '8px',
+                                height: '8px',
+                                background: '#ef4444',
+                                borderRadius: '50%'
+                            }} />
+                        )}
+                    </button>
+
+                    <div style={{ height: '24px', width: '1px', background: 'rgba(255,255,255,0.1)' }}></div> {/* Separator */}
+
                     <span>👤 {displayName}</span>
                     {(!ensName && !customName) && (
                         <button
@@ -229,14 +261,14 @@ export function GameArena() {
                                 const name = prompt("Enter a Game Name (Mock ENS):");
                                 if (name) setCustomName(name.endsWith('.eth') ? name : name + '.eth');
                             }}
-                            style={{ fontSize: '0.8rem', padding: '2px 8px', background: '#444', border: 'none', borderRadius: '4px', cursor: 'pointer', color: '#fff' }}
+                            style={{ fontSize: '0.75rem', padding: '4px 8px', background: '#3b82f6', border: 'none', borderRadius: '4px', cursor: 'pointer', color: '#fff', fontWeight: 'bold' }}
                         >
                             Set Name
                         </button>
                     )}
                 </div>
                 <span>🏁 Round #{state.roundId}</span>
-                <span style={{ color: '#FFE600', fontWeight: 'bold' }}>💰 Balance: ${balance}</span>
+                <span style={{ color: '#FFE600', fontWeight: 'bold', fontSize: '1.1rem', textShadow: '0 0 10px rgba(255, 230, 0, 0.3)' }}>💰 ${balance}</span>
             </div>
 
             <div className="timer-section">
