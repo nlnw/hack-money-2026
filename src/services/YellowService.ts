@@ -1,8 +1,14 @@
+import { createPublicClient, http, type WalletClient } from 'viem';
+import { mainnet } from 'viem/chains';
 import { NitroliteClient, WalletStateSigner, type NitroliteClientConfig } from '@erc7824/nitrolite';
-import type { WalletClient } from 'viem';
 
 // Constants
 const CLEARNODE_URL = 'wss://clearnet.yellow.com/ws';
+
+const publicClient = createPublicClient({
+    chain: mainnet,
+    transport: http()
+});
 
 export class YellowService {
     private client: any;
@@ -13,7 +19,10 @@ export class YellowService {
 
     constructor() {
         try {
-            this.client = new NitroliteClient({ transport: { url: CLEARNODE_URL } } as any);
+            this.client = new NitroliteClient({
+                transport: { url: CLEARNODE_URL },
+                publicClient
+            } as any);
 
             // Mock receiving updates from "Network"
             setInterval(() => {
