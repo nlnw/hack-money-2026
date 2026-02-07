@@ -35,6 +35,7 @@ export class YellowService {
                 transport: { url: CLEARNODE_URL },
                 publicClient,
                 walletClient,
+                chainId: 1, // Mainnet
                 challengeDuration: 3600, // Minimum challenge duration
                 addresses: {
                     custody: '0x0000000000000000000000000000000000000000', // Placeholder/Mock Custody Address
