@@ -76,7 +76,11 @@ export const POST: APIRoute = async ({ request }) => {
         const data = await request.json() as any;
 
         if (data.type === 'BET') {
-            if (state.status !== 'OPEN') return new Response("Game Locked", { status: 400 });
+            if (state.status !== 'OPEN') return new Response(JSON.stringify({ error: "Game Locked" }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json' }
+            });
+
 
             const { userAddress, amount, prediction, ensName } = data.payload;
 
@@ -164,7 +168,10 @@ export const POST: APIRoute = async ({ request }) => {
         }
 
     } catch (e) {
-        return new Response("Bad Request", { status: 400 });
+        return new Response(JSON.stringify({ error: "Bad Request" }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+        });
     }
 
     return new Response("Unknown Action", { status: 400 });

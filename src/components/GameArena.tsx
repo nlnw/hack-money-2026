@@ -50,17 +50,29 @@ export function GameArena() {
         // Update Backend
         // Use custom name if provided, otherwise fallback to ENS or null
         const displayName = customName || ensName || undefined;
-        const res: any = await placeBet(address, type, 5, displayName);
+        try {
+            const res: any = await placeBet(address, type, 5, displayName);
 
-        // Update Local State
-        // If refund, add it back
-        let newBalance = balance - 5;
-        if (res && res.refund) {
-            newBalance += res.refund;
-            alert(res.message);
+            if (res.error) {
+                alert(res.error);
+                return;
+            }
+
+            // Update Local State
+            // If refund, add it back
+            let newBalance = balance - 5;
+            if (res && res.refund) {
+                newBalance += res.refund;
+                alert(res.message);
+            }
+
+            setBalance(newBalance);
+        } catch (e) {
+            console.error("Bet Error", e);
+            alert("Failed to place bet. Try again.");
         }
 
-        setBalance(newBalance);
+
     };
 
     if (!address) {
@@ -130,14 +142,30 @@ export function GameArena() {
                 <button
                     className="bet-btn run"
                     onClick={() => handleBet('RUN')}
-                    style={{ background: '#3b82f6', fontSize: '1.5rem', padding: '2rem 4rem', border: 'none' }}
+                    disabled={isBettingDisabled}
+                    style={{
+                        background: '#3b82f6',
+                        fontSize: '1.5rem',
+                        padding: '2rem 4rem',
+                        border: 'none',
+                        opacity: isBettingDisabled ? 0.5 : 1,
+                        cursor: isBettingDisabled ? 'not-allowed' : 'pointer'
+                    }}
                 >
                     RUN 🏃
                 </button>
                 <button
                     className="bet-btn pass"
                     onClick={() => handleBet('PASS')}
-                    style={{ background: '#ef4444', fontSize: '1.5rem', padding: '2rem 4rem', border: 'none' }}
+                    disabled={isBettingDisabled}
+                    style={{
+                        background: '#ef4444',
+                        fontSize: '1.5rem',
+                        padding: '2rem 4rem',
+                        border: 'none',
+                        opacity: isBettingDisabled ? 0.5 : 1,
+                        cursor: isBettingDisabled ? 'not-allowed' : 'pointer'
+                    }}
                 >
                     PASS 🏈
                 </button>
