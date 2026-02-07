@@ -35,7 +35,10 @@ export class YellowService {
                 transport: { url: CLEARNODE_URL },
                 publicClient,
                 walletClient,
-                challengeDuration: 3600 // Minimum challenge duration
+                challengeDuration: 3600, // Minimum challenge duration
+                addresses: {
+                    custody: '0x0000000000000000000000000000000000000000' // Placeholder/Mock Custody Address
+                }
             } as any);
             this.signer = new WalletStateSigner(walletClient as any);
 
