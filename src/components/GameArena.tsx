@@ -11,11 +11,11 @@ const styles = {
         position: 'relative' as const,
         padding: '1rem',
         maxWidth: '100%',
-        minHeight: '100vh',
+        minHeight: 'auto', // Let app-container handle height
     },
     yellowBadge: (connected: boolean) => ({
         position: 'fixed' as const,
-        top: '80px',
+        top: '70px', // Raised slightly
         left: '50%',
         transform: 'translateX(-50%)',
         background: connected ? 'linear-gradient(135deg, #FFE600 0%, #FFA500 100%)' : 'rgba(60,60,60,0.9)',
@@ -46,7 +46,7 @@ const styles = {
         border: '1px solid rgba(255,255,255,0.08)',
         boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
         maxWidth: '500px',
-        margin: '100px auto 20px',
+        margin: '60px auto 20px', // Reduced top margin
         textAlign: 'center' as const,
     },
     statsRow: {
