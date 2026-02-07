@@ -1,0 +1,72 @@
+:root {
+    --yellow-bg: #141414;
+    --yellow-accent: #FFE600;
+    --yellow-text: #FFFFFF;
+}
+
+body {
+    margin: 0;
+    background-color: var(--yellow-bg);
+    color: var(--yellow-text);
+    font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid #333;
+}
+
+.game-arena-wrapper {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+.game-arena-container {
+    text-align: center;
+}
+
+/* Ticker Animation */
+@keyframes scroll {
+    0% {
+        transform: translateX(100%);
+    }
+
+    100% {
+        transform: translateX(-100%);
+    }
+}
+
+.ticker {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    background: #000;
+    border-top: 1px solid #333;
+    padding: 0.5rem 0;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+/* Buttons */
+.bet-btn {
+    transition: transform 0.1s;
+    cursor: pointer;
+}
+
+.bet-btn:active {
+    transform: scale(0.95);
+}

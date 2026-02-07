@@ -1,0 +1,31 @@
+{
+  "dependencies": {
+    "@astrojs/cloudflare": "^12.6.12",
+    "@astrojs/react": "^4.4.2",
+    "@erc7824/nitrolite": "^0.5.3",
+    "@metamask/sdk": "^0.34.0",
+    "@rainbow-me/rainbowkit": "^2.2.10",
+    "@tanstack/react-query": "^5.90.20",
+    "buffer": "^6.0.3",
+    "clsx": "^2.1.1",
+    "ethers": "^6.16.0",
+    "events": "^3.3.0",
+    "process": "^0.11.10",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "tailwind-merge": "^3.4.0",
+    "util": "^0.12.5",
+    "viem": "^2.45.1",
+    "wagmi": "^3.4.2"
+  },
+  "scripts": {
+    "start": "astro dev",
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "npm run build && wrangler pages dev ./dist --port 8788",
+    "deploy": "astro build && wrangler pages deploy ./dist"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260206.0"
+  }
+}
