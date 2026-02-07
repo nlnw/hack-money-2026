@@ -49,6 +49,16 @@ SnapBet is a fast-paced prediction game where players bet on whether the quarter
 ### AI Tools
 - **Google Gemini** - Used for full-stack code generation, debugging, UI/UX design, and generating visual assets (logo, hero image).
 
+## 🏆 Prize Qualifications
+
+### Integrate ENS ($3,500)
+**How we qualify:**
+- **Custom React Hooks:** We implemented custom logic using `wagmi`'s `useEnsName` and `useEnsAvatar` hooks throughout the application.
+- **Avatar Resolution:** The `GameArena` component resolves and displays the user's ENS avatar next to their name.
+- **Reverse Resolution:** Users can connect with just their address, and we automatically reverse-resolve it to their primary ENS name using `useEnsName`.
+- **Leaderboard Integration:** The leaderboard component (`LeaderboardItem`) independently resolves ENS names and avatars for all top players, ensuring a social and identity-rich experience.
+- **Database Integration:** ENS names are stored alongside addresses in our Cloudflare D1 database for persistent identity across sessions.
+
 ## 🚀 Quick Start
 
 ```bash

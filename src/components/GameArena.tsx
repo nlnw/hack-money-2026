@@ -1,4 +1,4 @@
-import { useAccount, useWalletClient, useEnsName } from 'wagmi';
+import { useAccount, useWalletClient, useEnsName, useEnsAvatar } from 'wagmi';
 import { useGameState } from '../hooks/useGameState';
 import { useEffect, useState, useMemo } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
@@ -234,6 +234,8 @@ export function GameArena() {
     const [balance, setBalance] = useState<number | null>(null);
     const [balanceLoading, setBalanceLoading] = useState(false);
     const [customName, setCustomName] = useState<string>('');
+    const displayName = customName || ensName || (address ? `${address.slice(0, 4)}...${address.slice(-3)}` : '');
+    const { data: avatar } = useEnsAvatar({ name: displayName, query: { enabled: !!displayName && displayName.includes('.') } });
     const [yellowConnected, setYellowConnected] = useState(false);
     const [streak, setStreak] = useState(0);
     const [showResult, setShowResult] = useState(false);
@@ -377,7 +379,7 @@ export function GameArena() {
         );
     }
 
-    const displayName = customName || ensName || `${address.slice(0, 4)}...${address.slice(-3)}`;
+
 
     return (
         <div style={styles.container}>
@@ -406,7 +408,11 @@ export function GameArena() {
                 {/* Stats Row */}
                 <div style={styles.statsRow}>
                     <div style={styles.userBadge}>
-                        <span>👤</span>
+                        {avatar ? (
+                            <img src={avatar} alt={displayName} style={{ width: '24px', height: '24px', borderRadius: '50%' }} />
+                        ) : (
+                            <span>👤</span>
+                        )}
                         <span>{displayName}</span>
                     </div>
                     <div style={styles.roundBadge}>Round #{state.roundId}</div>
