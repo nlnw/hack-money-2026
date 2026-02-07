@@ -17,7 +17,7 @@ import React from 'react';
 
 const config = getDefaultConfig({
     appName: 'SnapBet',
-    projectId: 'YOUR_PROJECT_ID',
+    projectId: '86d5b7412ac494c2e8ebe45448b5c35c',
     chains: [mainnet, sepolia],
     ssr: false,
 });
