@@ -1,9 +1,229 @@
 import { useAccount, useWalletClient, useEnsName } from 'wagmi';
 import { useGameState } from '../hooks/useGameState';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { yellowService } from '../services/YellowService';
 import toast, { Toaster } from 'react-hot-toast';
+
+// CSS styles as objects for responsive design
+const styles = {
+    container: {
+        position: 'relative' as const,
+        padding: '1rem',
+        maxWidth: '100%',
+        minHeight: '100vh',
+    },
+    yellowBadge: (connected: boolean) => ({
+        position: 'fixed' as const,
+        top: '80px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        background: connected ? 'linear-gradient(135deg, #FFE600 0%, #FFA500 100%)' : 'rgba(60,60,60,0.9)',
+        color: connected ? '#000' : '#888',
+        padding: '6px 14px',
+        borderRadius: '20px',
+        fontSize: '0.75rem',
+        fontWeight: 700,
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        boxShadow: connected ? '0 0 20px rgba(255,230,0,0.4)' : 'none',
+        zIndex: 1000,
+        animation: 'badgePulse 2s ease-in-out infinite',
+    }),
+    statusDot: (connected: boolean) => ({
+        width: '6px',
+        height: '6px',
+        borderRadius: '50%',
+        background: connected ? '#00FF00' : '#666',
+        boxShadow: connected ? '0 0 6px #00FF00' : 'none',
+    }),
+    mainCard: {
+        background: 'linear-gradient(180deg, rgba(20,20,35,0.95) 0%, rgba(10,10,20,0.98) 100%)',
+        backdropFilter: 'blur(20px)',
+        borderRadius: '24px',
+        padding: '1.5rem',
+        border: '1px solid rgba(255,255,255,0.08)',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+        maxWidth: '500px',
+        margin: '100px auto 20px',
+        textAlign: 'center' as const,
+    },
+    statsRow: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '0.75rem 1rem',
+        background: 'rgba(0,0,0,0.3)',
+        borderRadius: '12px',
+        marginBottom: '1rem',
+        flexWrap: 'wrap' as const,
+        gap: '0.5rem',
+    },
+    statItem: {
+        fontSize: '0.85rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+    },
+    timerContainer: {
+        margin: '1.5rem 0',
+    },
+    timerText: (urgent: boolean) => ({
+        fontSize: 'clamp(3rem, 15vw, 6rem)',
+        fontWeight: 900,
+        margin: 0,
+        color: urgent ? '#FF4D4D' : '#fff',
+        textShadow: urgent ? '0 0 30px rgba(255,77,77,0.5)' : '0 0 30px rgba(255,255,255,0.1)',
+        letterSpacing: '-2px',
+        animation: urgent ? 'timerPulse 0.5s ease-in-out infinite' : 'none',
+    }),
+    statusLabel: {
+        fontSize: '0.9rem',
+        color: 'rgba(255,255,255,0.6)',
+        textTransform: 'uppercase' as const,
+        letterSpacing: '2px',
+        marginTop: '-10px',
+    },
+    potSection: {
+        margin: '1.5rem 0',
+        padding: '1.5rem',
+        background: 'linear-gradient(135deg, rgba(0,255,148,0.1) 0%, rgba(0,200,100,0.05) 100%)',
+        borderRadius: '16px',
+        border: '1px solid rgba(0,255,148,0.2)',
+    },
+    potLabel: {
+        fontSize: '0.75rem',
+        color: 'rgba(255,255,255,0.5)',
+        textTransform: 'uppercase' as const,
+        letterSpacing: '2px',
+        margin: 0,
+    },
+    potValue: {
+        fontSize: 'clamp(2rem, 10vw, 4rem)',
+        fontWeight: 900,
+        color: '#00FF94',
+        margin: '0.25rem 0',
+        textShadow: '0 0 30px rgba(0,255,148,0.4)',
+    },
+    bettingSection: {
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '1rem',
+        marginTop: '1.5rem',
+    },
+    betButton: (type: 'run' | 'pass', disabled: boolean) => ({
+        padding: 'clamp(1rem, 4vw, 1.5rem)',
+        fontSize: 'clamp(1rem, 4vw, 1.4rem)',
+        fontWeight: 800,
+        border: 'none',
+        borderRadius: '16px',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.4 : 1,
+        transition: 'all 0.2s ease',
+        background: type === 'run'
+            ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)'
+            : 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
+        boxShadow: type === 'run'
+            ? '0 8px 30px rgba(59,130,246,0.4)'
+            : '0 8px 30px rgba(239,68,68,0.4)',
+        color: '#fff',
+        textTransform: 'uppercase' as const,
+        letterSpacing: '1px',
+    }),
+    liveStats: {
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '0.75rem',
+        marginTop: '1.5rem',
+    },
+    liveStat: (type: 'run' | 'pass') => ({
+        padding: '1rem',
+        background: type === 'run' ? 'rgba(59,130,246,0.15)' : 'rgba(239,68,68,0.15)',
+        borderRadius: '12px',
+        border: `1px solid ${type === 'run' ? 'rgba(59,130,246,0.3)' : 'rgba(239,68,68,0.3)'}`,
+    }),
+    liveStatLabel: {
+        fontSize: '0.7rem',
+        color: 'rgba(255,255,255,0.5)',
+        textTransform: 'uppercase' as const,
+        margin: 0,
+    },
+    liveStatValue: (type: 'run' | 'pass') => ({
+        fontSize: '1.5rem',
+        fontWeight: 700,
+        color: type === 'run' ? '#60a5fa' : '#f87171',
+        margin: '0.25rem 0 0',
+    }),
+    resultOverlay: (result: string) => ({
+        position: 'fixed' as const,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0,0,0,0.9)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'column' as const,
+        zIndex: 2000,
+        animation: 'fadeIn 0.3s ease-out',
+    }),
+    resultText: (result: string) => ({
+        fontSize: 'clamp(4rem, 20vw, 10rem)',
+        fontWeight: 900,
+        color: result === 'RUN' ? '#3b82f6' : '#ef4444',
+        textShadow: `0 0 60px ${result === 'RUN' ? 'rgba(59,130,246,0.5)' : 'rgba(239,68,68,0.5)'}`,
+        animation: 'resultBounce 0.5s ease-out',
+    }),
+    welcomeCard: {
+        background: 'linear-gradient(180deg, rgba(20,20,35,0.95) 0%, rgba(10,10,20,0.98) 100%)',
+        backdropFilter: 'blur(20px)',
+        borderRadius: '24px',
+        padding: '2rem',
+        border: '1px solid rgba(255,255,255,0.08)',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+        maxWidth: '400px',
+        margin: '100px auto',
+        textAlign: 'center' as const,
+    },
+    welcomeTitle: {
+        fontSize: 'clamp(1.5rem, 6vw, 2.5rem)',
+        fontWeight: 900,
+        margin: '0 0 0.5rem',
+        background: 'linear-gradient(135deg, #FFE600 0%, #FFA500 100%)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
+    },
+    welcomeSubtitle: {
+        color: 'rgba(255,255,255,0.6)',
+        marginBottom: '1.5rem',
+    },
+    balanceDisplay: {
+        background: 'linear-gradient(135deg, rgba(255,230,0,0.1) 0%, rgba(255,165,0,0.05) 100%)',
+        padding: '0.5rem 1rem',
+        borderRadius: '20px',
+        fontWeight: 700,
+        color: '#FFE600',
+        fontSize: '1.1rem',
+        border: '1px solid rgba(255,230,0,0.2)',
+    },
+    userBadge: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        fontSize: '0.85rem',
+        color: 'rgba(255,255,255,0.8)',
+    },
+    roundBadge: {
+        fontSize: '0.75rem',
+        color: 'rgba(255,255,255,0.5)',
+        padding: '4px 10px',
+        background: 'rgba(255,255,255,0.05)',
+        borderRadius: '10px',
+    },
+};
 
 export function GameArena() {
     const { address } = useAccount();
@@ -15,6 +235,22 @@ export function GameArena() {
     const [balanceLoading, setBalanceLoading] = useState(false);
     const [customName, setCustomName] = useState<string>('');
     const [yellowConnected, setYellowConnected] = useState(false);
+    const [streak, setStreak] = useState(0);
+
+    // Live betting stats
+    const bettingStats = useMemo(() => {
+        if (!state?.bets) return { runCount: 0, passCount: 0, runAmount: 0, passAmount: 0 };
+        return state.bets.reduce((acc, bet) => {
+            if (bet.prediction === 'RUN') {
+                acc.runCount++;
+                acc.runAmount += bet.amount;
+            } else {
+                acc.passCount++;
+                acc.passAmount += bet.amount;
+            }
+            return acc;
+        }, { runCount: 0, passCount: 0, runAmount: 0, passAmount: 0 });
+    }, [state?.bets]);
 
     // Fetch balance from D1 on mount
     useEffect(() => {
@@ -40,7 +276,6 @@ export function GameArena() {
         }
     }, [state]);
 
-    // Connect to Yellow SDK when wallet is available
     useEffect(() => {
         if (walletClient && address) {
             yellowService.connect(walletClient, address).then(() => {
@@ -49,28 +284,37 @@ export function GameArena() {
         }
     }, [walletClient, address]);
 
-    if (!connected) return <div className="card">Connecting to Game Server...</div>;
-    if (!state) return <div className="card">Loading Game State...</div>;
+    if (!connected) return (
+        <div style={styles.welcomeCard}>
+            <div className="loading-spinner" style={{ margin: '2rem auto', width: 40, height: 40, border: '3px solid rgba(255,230,0,0.2)', borderTop: '3px solid #FFE600', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+            <p style={{ color: 'rgba(255,255,255,0.6)' }}>Connecting to Game Server...</p>
+        </div>
+    );
 
-    const isLocked = state.status === 'LOCKED' || state.status === 'RESOLVING';
+    if (!state) return (
+        <div style={styles.welcomeCard}>
+            <div className="loading-spinner" style={{ margin: '2rem auto', width: 40, height: 40, border: '3px solid rgba(255,230,0,0.2)', borderTop: '3px solid #FFE600', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+            <p style={{ color: 'rgba(255,255,255,0.6)' }}>Loading Game State...</p>
+        </div>
+    );
+
     const isBettingDisabled = state.status !== 'OPEN';
+    const isUrgent = state.timeLeft <= 5 && state.status === 'OPEN';
 
     const handleBet = async (type: 'RUN' | 'PASS') => {
         if (!address) return;
         if (balance === null || balance < 5) {
-            toast.error("Insufficient Funds!");
+            toast.error("💸 Insufficient Funds!");
             return;
         }
 
-        // Yellow SDK Flow - State channel bet
         const yellowPromise = yellowService.placeBet(5, type);
         toast.promise(yellowPromise, {
-            loading: '🟡 Yellow: Processing state channel...',
-            success: '🟡 Yellow: Bet recorded on-chain!',
-            error: '🟡 Yellow: State channel error'
+            loading: '🟡 Processing via Yellow Network...',
+            success: `🟡 ${type} bet locked in!`,
+            error: '❌ State channel error'
         });
 
-        // Update Backend
         const displayName = customName || ensName || undefined;
         try {
             const res: any = await placeBet(address, type, 5, displayName);
@@ -80,16 +324,14 @@ export function GameArena() {
                 return;
             }
 
-            // Calculate new balance
             let delta = -5;
             if (res && res.refund) {
                 delta += res.refund;
-                toast.success(res.message);
+                toast.success(`🔄 ${res.message}`);
             } else if (res.message) {
-                toast.success(res.message);
+                toast.success(`✅ ${res.message}`);
             }
 
-            // Update balance in D1
             const balanceRes = await fetch('/api/balance', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -107,164 +349,121 @@ export function GameArena() {
 
     if (!address) {
         return (
-            <div className="card">
-                <h2>Welcome to SnapBet</h2>
-                <p>Connect your wallet to join the high-speed betting action.</p>
-                <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1rem' }}>
-                    <ConnectButton />
+            <div style={styles.container}>
+                <Toaster position="top-center" />
+                <div style={styles.welcomeCard}>
+                    <h1 style={styles.welcomeTitle}>⚡ SnapBet</h1>
+                    <p style={styles.welcomeSubtitle}>High-speed crypto betting powered by Yellow Network</p>
+                    <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <ConnectButton />
+                    </div>
+                    <div style={{ marginTop: '2rem', padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}>
+                        <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', margin: 0 }}>
+                            🏈 Predict the play • 💰 Win the pot • 🚀 Instant settlements
+                        </p>
+                    </div>
                 </div>
             </div>
         );
     }
 
-    const displayName = customName || ensName || (address.slice(0, 6) + '...' + address.slice(-4));
+    const displayName = customName || ensName || `${address.slice(0, 4)}...${address.slice(-3)}`;
 
     return (
-        <div className="game-arena-container" style={{ position: 'relative', overflow: 'hidden' }}>
-            {/* React Hot Toast Container */}
+        <div style={styles.container}>
             <Toaster
-                position="top-right"
+                position="top-center"
                 toastOptions={{
-                    duration: 4000,
+                    duration: 3000,
                     style: {
-                        background: '#1a1a2e',
+                        background: 'rgba(20,20,35,0.95)',
                         color: '#fff',
                         border: '1px solid rgba(255,255,255,0.1)',
-                    },
-                    success: {
-                        iconTheme: { primary: '#10b981', secondary: '#fff' },
-                    },
-                    error: {
-                        iconTheme: { primary: '#ef4444', secondary: '#fff' },
+                        borderRadius: '12px',
+                        fontSize: '0.9rem',
                     },
                 }}
             />
 
             {/* Yellow Network Badge */}
-            <div style={{
-                position: 'absolute',
-                top: '20px',
-                left: '20px',
-                background: yellowConnected ? 'linear-gradient(135deg, #FFE600 0%, #FFA500 100%)' : 'rgba(100,100,100,0.5)',
-                color: yellowConnected ? '#000' : '#888',
-                padding: '8px 16px',
-                borderRadius: '20px',
-                fontSize: '0.85rem',
-                fontWeight: 'bold',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: yellowConnected ? '0 0 20px rgba(255,230,0,0.3)' : 'none',
-                zIndex: 100
-            }}>
-                <span style={{
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    background: yellowConnected ? '#00FF00' : '#666',
-                    boxShadow: yellowConnected ? '0 0 6px #00FF00' : 'none'
-                }} />
-                🟡 Yellow Network {yellowConnected ? 'Connected' : 'Connecting...'}
+            <div style={styles.yellowBadge(yellowConnected)}>
+                <span style={styles.statusDot(yellowConnected)} />
+                🟡 Yellow {yellowConnected ? '✓' : '...'}
             </div>
 
-            <div className="stats-bar" style={{
-                marginBottom: '1rem',
-                marginTop: '60px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                padding: '0.75rem 1.5rem',
-                background: 'rgba(20, 20, 20, 0.6)',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '16px',
-                alignItems: 'center',
-                border: '1px solid rgba(255,255,255,0.05)'
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                    <span>👤 {displayName}</span>
-                    {(!ensName && !customName) && (
-                        <button
-                            onClick={() => {
-                                const name = prompt("Enter a Game Name (Mock ENS):");
-                                if (name) setCustomName(name.endsWith('.eth') ? name : name + '.eth');
-                            }}
-                            style={{ fontSize: '0.75rem', padding: '4px 8px', background: '#3b82f6', border: 'none', borderRadius: '4px', cursor: 'pointer', color: '#fff', fontWeight: 'bold' }}
-                        >
-                            Set Name
-                        </button>
-                    )}
+            {/* Main Card */}
+            <div style={styles.mainCard}>
+                {/* Stats Row */}
+                <div style={styles.statsRow}>
+                    <div style={styles.userBadge}>
+                        <span>👤</span>
+                        <span>{displayName}</span>
+                    </div>
+                    <div style={styles.roundBadge}>Round #{state.roundId}</div>
+                    <div style={styles.balanceDisplay}>
+                        💰 ${balance !== null ? balance.toLocaleString() : '...'}
+                    </div>
                 </div>
-                <span>🏁 Round #{state.roundId}</span>
-                <span style={{ color: '#FFE600', fontWeight: 'bold', fontSize: '1.1rem', textShadow: '0 0 10px rgba(255, 230, 0, 0.3)' }}>
-                    💰 ${balance !== null ? balance : '...'}
-                </span>
+
+                {/* Timer */}
+                <div style={styles.timerContainer}>
+                    <h1 style={styles.timerText(isUrgent)}>{state.timeLeft}s</h1>
+                    <p style={styles.statusLabel}>
+                        {state.status === 'IDLE' ? '⏳ WAITING' : state.status === 'OPEN' ? '🔥 BETTING OPEN' : '🔒 LOCKED'}
+                    </p>
+                </div>
+
+                {/* Pot */}
+                <div style={styles.potSection}>
+                    <p style={styles.potLabel}>Current Pot</p>
+                    <h2 style={styles.potValue}>${localPot}</h2>
+                </div>
+
+                {/* Live Stats */}
+                <div style={styles.liveStats}>
+                    <div style={styles.liveStat('run')}>
+                        <p style={styles.liveStatLabel}>🏃 Run Bets</p>
+                        <p style={styles.liveStatValue('run')}>{bettingStats.runCount} (${bettingStats.runAmount})</p>
+                    </div>
+                    <div style={styles.liveStat('pass')}>
+                        <p style={styles.liveStatLabel}>🏈 Pass Bets</p>
+                        <p style={styles.liveStatValue('pass')}>{bettingStats.passCount} (${bettingStats.passAmount})</p>
+                    </div>
+                </div>
+
+                {/* Betting Buttons */}
+                <div style={styles.bettingSection}>
+                    <button
+                        style={styles.betButton('run', isBettingDisabled)}
+                        onClick={() => handleBet('RUN')}
+                        disabled={isBettingDisabled}
+                    >
+                        🏃 RUN
+                    </button>
+                    <button
+                        style={styles.betButton('pass', isBettingDisabled)}
+                        onClick={() => handleBet('PASS')}
+                        disabled={isBettingDisabled}
+                    >
+                        🏈 PASS
+                    </button>
+                </div>
+
+                {/* Bet Cost Label */}
+                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', marginTop: '1rem' }}>
+                    Each bet costs $5
+                </p>
             </div>
 
-            <div className="timer-section">
-                <h2 style={{ fontSize: '4rem', margin: '0', color: state.timeLeft < 5 ? '#FF4D4D' : '#fff' }}>
-                    {state.timeLeft}s
-                </h2>
-                <p>{state.status === 'IDLE' ? 'WAITING FOR NEXT SNAP' : 'TO SNAP'}</p>
-            </div>
-
-            <div className="pot-display">
-                <h3>CURRENT POT</h3>
-                <h1 style={{ color: '#00FF94' }}>${localPot}</h1>
-            </div>
-
-            <div className="betting-controls" style={{
-                opacity: isBettingDisabled ? 0.5 : 1,
-                pointerEvents: isBettingDisabled ? 'none' : 'auto',
-                display: 'flex',
-                gap: '2rem',
-                justifyContent: 'center',
-                marginTop: '2rem'
-            }}>
-                <button
-                    className="bet-btn run"
-                    onClick={() => handleBet('RUN')}
-                    disabled={isBettingDisabled}
-                    style={{
-                        background: '#3b82f6',
-                        fontSize: '1.5rem',
-                        padding: '2rem 4rem',
-                        border: 'none',
-                        opacity: isBettingDisabled ? 0.5 : 1,
-                        cursor: isBettingDisabled ? 'not-allowed' : 'pointer'
-                    }}
-                >
-                    RUN 🏃
-                </button>
-                <button
-                    className="bet-btn pass"
-                    onClick={() => handleBet('PASS')}
-                    disabled={isBettingDisabled}
-                    style={{
-                        background: '#ef4444',
-                        fontSize: '1.5rem',
-                        padding: '2rem 4rem',
-                        border: 'none',
-                        opacity: isBettingDisabled ? 0.5 : 1,
-                        cursor: isBettingDisabled ? 'not-allowed' : 'pointer'
-                    }}
-                >
-                    PASS 🏈
-                </button>
-            </div>
-
+            {/* Result Overlay */}
             {state.lastResult && state.status === 'RESOLVING' && (
-                <div className="result-overlay" style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    background: 'rgba(0,0,0,0.9)',
-                    padding: '2rem',
-                    borderRadius: '20px',
-                    border: `4px solid ${state.lastResult === 'RUN' ? '#3b82f6' : '#ef4444'}`
-                }}>
-                    <h1 style={{ fontSize: '5rem', margin: 0 }}>
-                        {state.lastResult}
+                <div style={styles.resultOverlay(state.lastResult)}>
+                    <h1 style={styles.resultText(state.lastResult)}>
+                        {state.lastResult === 'RUN' ? '🏃' : '🏈'} {state.lastResult}!
                     </h1>
+                    <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '1.2rem' }}>
+                        {state.lastResult === 'RUN' ? 'The QB ran!' : 'The QB passed!'}
+                    </p>
                 </div>
             )}
         </div>
