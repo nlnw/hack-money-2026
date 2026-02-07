@@ -249,6 +249,16 @@ export function GameArena() {
         }
     }, [state?.status, state?.lastResult]);
 
+    // ENS Simulator for Demo Video
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const simName = params.get('ens');
+        if (simName) {
+            setCustomName(simName);
+            toast.success(`🔮 ENS Simulator Active: ${simName}`, { icon: '🕵️‍♂️' });
+        }
+    }, []);
+
     // Live betting stats
     const bettingStats = useMemo(() => {
         if (!state?.bets) return { runCount: 0, passCount: 0, runAmount: 0, passAmount: 0 };
