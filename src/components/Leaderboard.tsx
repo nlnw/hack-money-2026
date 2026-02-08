@@ -38,9 +38,16 @@ function LeaderboardItem({ entry, rank }: { entry: any, rank: number }) {
                             {displayName.slice(0, 2).toUpperCase()}
                         </div>
                     )}
-                    <span style={{ fontWeight: 'bold', color: '#fff' }}>
+                    <a 
+                        href={`https://etherscan.io/address/${entry.address}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        style={{ fontWeight: 'bold', color: '#fff', textDecoration: 'none' }}
+                        onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
+                        onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
+                    >
                         {displayName}
-                    </span>
+                    </a>
                 </div>
             </div>
             <div style={{
@@ -75,9 +82,14 @@ export function Leaderboard() {
             boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
             zIndex: 100
         }}>
-            <h3 style={{ margin: '0 0 1rem 0', color: '#FFE600', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.75rem', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                🏆 Top Degens
-            </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.75rem' }}>
+                <h3 style={{ margin: 0, color: '#FFE600', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    🏆 Top Degens
+                </h3>
+                <a href="/leaderboard" style={{ fontSize: '0.8rem', color: '#fff', textDecoration: 'none', opacity: 0.7 }}>
+                    View All →
+                </a>
+            </div>
 
             <div className="list">
                 {state.leaderboard.length === 0 && <p style={{ color: '#666', textAlign: 'center', padding: '1rem' }}>No players yet</p>}

@@ -51,7 +51,8 @@ export function useGameState() {
         fetchState();
 
         // Slow Poll fallback (every 5 seconds instead of 1s)
-        const interval = setInterval(fetchState, 5000);
+        // Slow Poll fallback (every 15 seconds)
+        const interval = setInterval(fetchState, 15_000);
 
         // Subscribe to Yellow Service for "Push" updates
         // In a real implementation, yellowService would pass the new state directly

@@ -19,7 +19,7 @@ const parseRPCResponse = (data: any) => {
 
 export class YellowService {
     private ws: WebSocket | null = null;
-    private isConnected = false;
+    public isConnected = false;
     private listeners: ((state: any) => void)[] = [];
     
     private userAddress: string | null = null;
@@ -69,9 +69,13 @@ export class YellowService {
             this.isConnected = true;
             this.notifyListeners({ connected: true });
             
-            // Auto-create session on connect 
-            // In a real app we might wait for user action
-            this.createSession(address);
+            // Auto-create session on connect ONLY if we have an active bet pending recovery
+            // Otherwise wait for user to bet (Lazy Session) to avoid signature spam on refresh
+            const hasActiveBet = localStorage.getItem('yellow_has_active_bet') === 'true';
+            if (hasActiveBet) {
+                console.log('Yellow SDK: Found active bet flag, restoring session...');
+                this.createSession(address);
+            }
         };
 
         this.ws.onmessage = (event) => {
@@ -94,6 +98,16 @@ export class YellowService {
             this.isConnected = false;
             this.notifyListeners({ connected: false });
         };
+    }
+
+    async ensureSession() {
+        if (this.sessionId) return;
+        if (!this.userAddress) throw new Error("No user address");
+        await this.createSession(this.userAddress);
+        // Wait a bit for session to be confirmed? 
+        // Ideally we wait for 'session_created' event but for now we await the send.
+        // In a real app we'd wrap this in a promise that resolves on event.
+        await new Promise(r => setTimeout(r, 2000)); 
     }
 
     async createSession(userAddress: string) {
@@ -129,15 +143,31 @@ export class YellowService {
 
             this.ws.send(sessionMessage);
             console.log('Yellow SDK: Session Create Message Sent');
+            
+            // Mark as having active session capability
+            localStorage.setItem('yellow_has_active_bet', 'true');
+            
         } catch (e) {
             console.error('Yellow SDK: Failed to create session message', e);
+            throw e; // Propagate so ensureSession fails
         }
     }
 
     async placeBet(amount: number, prediction: 'RUN' | 'PASS') {
         if (!this.isConnected || !this.ws || !this.messageSigner) {
             console.error('Yellow SDK: Not connected');
-            return;
+            throw new Error('Yellow Network not connected');
+        }
+
+        // Lazy Session Creation
+        if (!this.sessionId) {
+            console.log('Yellow SDK: No session, creating one before bet...');
+            try {
+                await this.ensureSession();
+            } catch (e) {
+                console.error('Yellow SDK: Failed to ensure session', e);
+                return;
+            }
         }
 
         console.log(`Yellow SDK: Placing bet ${amount} on ${prediction}`);
@@ -187,6 +217,10 @@ export class YellowService {
         else if (message.type === 'payment') {
             console.log('💰 Yellow SDK: Payment/Payout Received:', message.amount);
             this.notifyListeners({ type: 'payout', amount: message.amount });
+            // Bet settled, we can clear the auto-restore flag if we want 
+            // OR we keep it to maintain session. For now let's keep it, but maybe expire it?
+            // Actually, if payout is received, maybe we can clear it.
+            localStorage.removeItem('yellow_has_active_bet');
         }
         else if (message.result) {
             // RPC Response

@@ -241,11 +241,18 @@ export function GameArena() {
     const [showResult, setShowResult] = useState(false);
 
     // Auto-show and auto-dismiss result overlay
+    // Only show if we transitioned from a non-RESOLVING state to RESOLVING (live event)
+    const [prevStatus, setPrevStatus] = useState<string | null>(null);
+
     useEffect(() => {
-        if (state?.status === 'RESOLVING' && state?.lastResult) {
-            setShowResult(true);
-            const timer = setTimeout(() => setShowResult(false), 3500);
-            return () => clearTimeout(timer);
+        if (state) {
+            // If we are transitioning to RESOLVING and we came from a known previous state (not null/initial load)
+            if (state.status === 'RESOLVING' && state.lastResult && prevStatus && prevStatus !== 'RESOLVING') {
+                setShowResult(true);
+                const timer = setTimeout(() => setShowResult(false), 3500);
+                return () => clearTimeout(timer);
+            }
+            setPrevStatus(state.status);
         }
     }, [state?.status, state?.lastResult]);
 
@@ -407,11 +414,7 @@ export function GameArena() {
                 }}
             />
 
-            {/* Yellow Network Badge */}
-            <div style={styles.yellowBadge(yellowConnected)}>
-                <span style={styles.statusDot(yellowConnected)} />
-                🟡 Yellow {yellowConnected ? '✓' : '...'}
-            </div>
+
 
             {/* Main Card */}
             <div style={styles.mainCard}>
